@@ -1,0 +1,40 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'">
+<title>pet</title>
+<style>
+  html, body { margin: 0; height: 100%; background: transparent; overflow: hidden; font-family: "Segoe UI", system-ui, sans-serif; user-select: none; }
+  canvas { position: absolute; left: 0; top: 0; image-rendering: pixelated; }
+  .bubble { position: absolute; box-sizing: border-box; width: 320px; background: #0f172a; color: #f1f5f9; border: 2px solid #334155; border-radius: 14px; padding: 12px 14px; box-shadow: 0 8px 24px rgba(0,0,0,.35); display: none; }
+  .bubble::after { content: ""; position: absolute; bottom: -10px; left: var(--tail, 40px); border: 9px solid transparent; border-top-color: #334155; border-bottom: 0; }
+  .bubble .msg { font-size: 14px; line-height: 1.35; }
+  .bubble .next { margin-top: 8px; font-size: 15px; font-weight: 700; color: #6ee7b7; }
+  .bubble .next::before { content: "▶ "; color: #94a3b8; font-weight: 400; }
+  .bubble .actions { display: flex; gap: 6px; margin-top: 10px; }
+  .bubble button { flex: 1; border: 0; border-radius: 8px; padding: 7px 6px; font: 600 12px "Segoe UI", sans-serif; cursor: pointer; background: #1e293b; color: #e2e8f0; }
+  .bubble button.primary { background: #059669; color: #fff; }
+  .bubble button:hover { filter: brightness(1.2); }
+  .floater { position: absolute; font: 800 16px "Segoe UI", sans-serif; color: #facc15; text-shadow: 0 2px 0 #1e1b2e, 0 0 6px rgba(0,0,0,.6); white-space: nowrap; pointer-events: none; animation: rise 2.2s ease-out forwards; }
+  .floater.big { font-size: 26px; color: #fde68a; }
+  .floater.good { color: #6ee7b7; }
+  @keyframes rise { 0% { opacity: 0; transform: translateY(10px) scale(.9); } 12% { opacity: 1; transform: translateY(0) scale(1.05); } 100% { opacity: 0; transform: translateY(-70px) scale(1); } }
+  .offline { position: absolute; right: 12px; bottom: 6px; font: 11px "Segoe UI", sans-serif; color: #94a3b8; display: none; }
+</style>
+</head>
+<body>
+  <canvas id="stage"></canvas>
+  <div class="bubble" id="bubble">
+    <div class="msg" id="msg"></div>
+    <div class="next" id="next"></div>
+    <div class="actions">
+      <button class="primary" id="b-done">Done ✓</button>
+      <button id="b-snooze">Snooze 10m</button>
+      <button id="b-wrong">Wrong nudge</button>
+    </div>
+  </div>
+  <div class="offline" id="offline">companion offline, reconnecting…</div>
+  <script type="module" src="pet.js"></script>
+</body>
+</html>

@@ -20,16 +20,20 @@ const JARVIS_NOW = env.BD_JARVIS_NOW || 'D:\\Samir-Second-Brain\\work\\NOW.gener
 
 // Server-sent events: the pet (or anything local) subscribes to /events.
 const listeners = new Set();
-const broadcast = (type, data) => { const line = `data: ${JSON.stringify({ type, ...data, at: Date.now() })}\n\n`; for (const res of listeners) res.write(line); };
+// `type` is written last so a payload field can never overwrite the channel.
+const broadcast = (type, data) => { const line = `data: ${JSON.stringify({ ...data, type, at: Date.now() })}\n\n`; for (const res of listeners) res.write(line); };
 
+// When a pet (or any live client) is connected it shows nudges itself, so
+// Windows pop-ups are only the fallback for when nothing is listening.
+const toast = (title, text) => { if (listeners.size === 0) notify(title, text); };
 const ui = {
-  async nudge({ message, nextAction }) { notify(message, `Next: ${nextAction}`); broadcast('nudge', { message, nextAction }); },
+  async nudge({ message, nextAction }) { toast(message, `Next: ${nextAction}`); broadcast('nudge', { message, nextAction }); },
   gameEvents(events) {
     for (const e of events) {
-      if (e.type === 'level-up') notify('Level up!', `You reached level ${e.level}`);
-      else if (e.type === 'title') notify('New title', e.name);
-      else if (e.type === 'boss-defeated') notify('Boss defeated', e.quest);
-      broadcast('game', e);
+      if (e.type === 'level-up') toast('Level up!', `You reached level ${e.level}`);
+      else if (e.type === 'title') toast('New title', e.name);
+      else if (e.type === 'boss-defeated') toast('Boss defeated', e.quest);
+      broadcast('game', { game: e });
     }
   },
   status(s) { broadcast('status', s); },
@@ -60,11 +64,19 @@ const routes = {
     companion.addSteps(q.id, b.steps || []);
     return { quest: q.title, added: (b.steps || []).length };
   },
-  'POST /pause': (b) => { companion.setPaused(!!b.paused); return { paused: !!b.paused }; },
+  'POST /pause': (b) => companion.setPaused(!!b.paused, { minutes: Number(b.minutes) || undefined }),
   'POST /feedback': (b) => companion.learnFromFeedback(b.verdict, { keyword: b.keyword }),
   'GET /rules': () => companion.rules(),
   'POST /rules/forget': (b) => companion.forgetRule(b.keyword),
   'GET /report': () => ({ report: killTestReport(store.get().log) }),
+  // Lets the pet's self-test replay events; only with BD_DEBUG=1.
+  'POST /debug/emit': (b) => {
+    if (env.BD_DEBUG !== '1') throw new Error('debug routes are off');
+    if (b.type === 'nudge') return ui.nudge(b), { emitted: 'nudge' };
+    if (b.type === 'game') return ui.gameEvents(b.events || []), { emitted: 'game' };
+    if (b.type === 'status') return ui.status(b.status || {}), { emitted: 'status' };
+    throw new Error('type must be nudge, game or status');
+  },
   'POST /import/jarvis': (b) => {
     const added = importFromFile(b.path || JARVIS_NOW, store.get().quests);
     for (const q of added) companion.addQuest(q, { activate: false });

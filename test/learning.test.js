@@ -72,3 +72,10 @@ test('learning: explicit keyword wins; nothing learned without a quest or a clue
   assert.equal(h.c.learnFromFeedback('wrong-nudge').learned, null); // no recent nudge
   assert.throws(() => h.c.learnFromFeedback('bogus'));
 });
+
+test('classifier: X/Twitter only by its title suffix, not any " / x" text', () => {
+  const q = { allow: [], deny: [] };
+  assert.equal(classify({ app: 'brave', title: 'Home / X - Brave', idleSeconds: 0 }, q).label, 'drift');
+  assert.equal(classify({ app: 'brave', title: 'Projects / Xero - Brave', idleSeconds: 0 }, q).label, 'unclear');
+  assert.equal(classify({ app: 'claude', title: 'Notes / x-axis plan', idleSeconds: 0 }, q).label, 'unclear');
+});

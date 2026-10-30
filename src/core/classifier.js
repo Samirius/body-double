@@ -7,7 +7,7 @@ export const DEFAULT_RULES = {
   awayAfterSeconds: 180,
   // Matched against "<app> <title>" lowercased. Kept short on purpose:
   // anything not listed stays 'unclear' rather than becoming a false nudge.
-  distractions: ['youtube', 'netflix', 'twitch', 'tiktok', 'instagram', 'facebook', 'reddit', ' / x', 'x.com', 'steam', 'epic games', 'shahid', 'anghami'],
+  distractions: ['youtube', 'netflix', 'twitch', 'tiktok', 'instagram', 'facebook', 'reddit', 'x.com', 'steam', 'epic games', 'shahid', 'anghami'],
   // Apps that are neutral plumbing (switching windows, the companion itself).
   neutralApps: ['explorer', 'searchhost', 'shellexperiencehost', 'lockapp', 'body-double', 'electron', 'startmenuexperiencehost', 'applicationframehost'],
 };
@@ -30,6 +30,10 @@ export function classify(sample, quest, rules = DEFAULT_RULES) {
   if (allow) return { label: 'on-task', reason: `matches quest keyword "${allow}"`, match: { list: 'allow', keyword: norm(allow) } };
   const questDeny = firstMatch(hay, quest?.deny);
   if (questDeny) return { label: 'drift', reason: `matches quest distraction "${questDeny.trim()}"`, match: { list: 'deny', keyword: norm(questDeny) } };
+  // X (Twitter) page titles end in "/ X"; a plain " / x" substring would also
+  // match ordinary titles like "Projects / Xero", so only the suffix counts.
+  const stripped = norm(String(sample.title || '').replace(BROWSER_SUFFIX, '').trim());
+  if (BROWSERS.includes(app) && /\/ x$/.test(stripped)) return { label: 'drift', reason: 'matches distraction "x"', match: { list: 'distractions', keyword: 'x' } };
   const globalDeny = firstMatch(hay, rules.distractions);
   if (globalDeny) return { label: 'drift', reason: `matches distraction "${globalDeny.trim()}"`, match: { list: 'distractions', keyword: norm(globalDeny) } };
   return { label: 'unclear', reason: 'no rule matched', match: null };

@@ -97,6 +97,8 @@ export function createCompanion({ store, watcher, makeBrain, ui, rules = DEFAULT
   }
 
   async function tick() {
+    const st0 = store.get();
+    if (st0.paused && st0.pausedUntil && now() >= st0.pausedUntil) { store.update((st) => ({ ...st, paused: false, pausedUntil: null })); store.log('resumed', { reason: 'snooze ended' }); ui.status?.({ label: lastLabel, paused: false, pausedUntil: null }); }
     if (busy || store.get().paused) return;
     busy = true;
     try {
@@ -138,7 +140,14 @@ export function createCompanion({ store, watcher, makeBrain, ui, rules = DEFAULT
       store.log('rule-forgotten', { keyword: kw, existed: had });
       return { forgotten: had ? kw : null, quest: q.title };
     },
-    setPaused(paused) { store.update((st) => ({ ...st, paused })); store.log(paused ? 'paused' : 'resumed'); },
+    // Optional minutes: a snooze that resumes by itself (survives restarts via pausedUntil).
+    setPaused(paused, { minutes } = {}) {
+      const pausedUntil = paused && minutes ? now() + minutes * 60_000 : null;
+      store.update((st) => ({ ...st, paused, pausedUntil }));
+      store.log(paused ? 'paused' : 'resumed', minutes ? { minutes } : {});
+      ui.status?.({ label: lastLabel, paused, pausedUntil });
+      return { paused, pausedUntil };
+    },
     addQuest(quest, { activate = true } = {}) {
       store.update((st) => ({ ...st, quests: [...st.quests, quest], activeQuestId: activate ? quest.id : st.activeQuestId }));
       store.log('quest-added', { title: quest.title });
@@ -165,7 +174,7 @@ export function createCompanion({ store, watcher, makeBrain, ui, rules = DEFAULT
     status() {
       const st = store.get();
       const quest = store.activeQuest();
-      return { paused: st.paused, label: lastLabel, quest: quest && { title: quest.title, next: nextStep(quest)?.text || null, boss: quest.boss ? bossHp(quest) : null }, level: levelProgress(st.game.xp.total), skills: st.game.xp.skills, titles: st.game.titles, streak: st.game.streak, nudges: st.nudges };
+      return { paused: st.paused, pausedUntil: st.pausedUntil || null, label: lastLabel, quest: quest && { title: quest.title, next: nextStep(quest)?.text || null, boss: quest.boss ? bossHp(quest) : null }, level: levelProgress(st.game.xp.total), skills: st.game.xp.skills, titles: st.game.titles, streak: st.game.streak, nudges: st.nudges };
     },
   };
 }

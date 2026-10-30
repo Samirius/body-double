@@ -4,10 +4,12 @@
   "description": "Proactive ADHD focus companion with a pixel pet (working name)",
   "main": "index.js",
   "scripts": {
-    "test": "node --test test/core.test.js test/brain.test.js test/companion.test.js test/watcher.test.js test/learning.test.js test/integration.test.js",
+    "test": "node --test test/core.test.js test/brain.test.js test/companion.test.js test/watcher.test.js test/learning.test.js test/pet.test.js test/integration.test.js",
     "start": "node src/cli.js",
     "daemon": "node src/daemon.js",
-    "mcp": "node src/mcp.js"
+    "mcp": "node src/mcp.js",
+    "pet": "electron src/pet/main.js",
+    "test:pet": "node scripts/pet-selftest.mjs"
   },
   "keywords": [],
   "author": "",
@@ -19,5 +21,8 @@
     "@earendil-works/pi-ai": "^1.4.0",
     "@modelcontextprotocol/sdk": "1.32.1",
     "zod": "3.25.76"
+  },
+  "devDependencies": {
+    "electron": "44.7.2"
   }
 }
