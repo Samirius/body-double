@@ -15,7 +15,7 @@ export function createDriftTracker(opts = {}) {
   let away = false;
 
   return {
-    push({ label, at, reason }) {
+    push({ label, at, reason, match = null }) {
       const events = [];
       if (!current || current.label !== label) current = { label, since: at };
 
@@ -30,7 +30,7 @@ export function createDriftTracker(opts = {}) {
           episode.nudges += 1;
           episode.lastNudgeAt = at;
           pendingReturn = { nudgedAt: at, driftStart: episode.start };
-          events.push({ type: 'drift', at, driftedSeconds: Math.round(driftedFor), nudgeNumber: episode.nudges, reason });
+          events.push({ type: 'drift', at, driftedSeconds: Math.round(driftedFor), nudgeNumber: episode.nudges, reason, match });
         }
       } else if (label === 'on-task') {
         if (pendingReturn) {

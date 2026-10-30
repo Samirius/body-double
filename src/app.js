@@ -10,7 +10,7 @@ export async function createApp({ env = process.env, ui, log = console.log }) {
   let modelHandle = null;
   try { modelHandle = await createModelFromEnv(env); } catch (e) { log(`model setup failed, using templates: ${e.message}`); }
   const companion = createCompanion({
-    store, watcher: createWatcher(), ui,
+    store, watcher: createWatcher({ onRestart: (n) => store.log('watcher-restart', { n }) }), ui,
     makeBrain: (callbacks) => createBrain({ modelHandle, ...callbacks }),
     driftOptions: { driftAfterSeconds: Number(env.BD_DRIFT_SECONDS) || 180 },
     sampleEverySeconds: Number(env.BD_SAMPLE_SECONDS) || 15,

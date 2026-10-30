@@ -45,7 +45,8 @@ const companion = createCompanion({
 const HELP = `commands:
   add <title> | <step>; <step> | allow: kw, kw | deny: kw | tag: <skill> | deadline: YYYY-MM-DD
   d  done (next step)      s  status        p  pause/resume
-  w  last nudge was wrong  m  I drifted and you missed it
+  w [kw]  last nudge was wrong    m [kw]  I drifted and you missed it
+  rules   show learned rules      forget <kw>  undo a learned rule
   r  kill-test report      h  help          x  exit`;
 
 function parseQuest(line) {
@@ -79,8 +80,12 @@ rl.on('line', (raw) => {
   else if (cmd === 'd') { if (!companion.completeNextStep().length) say('no undone step in the active quest'); printStatus(); }
   else if (cmd === 's') printStatus();
   else if (cmd === 'p') { companion.setPaused(!store.get().paused); say(store.get().paused ? 'paused' : 'resumed'); }
-  else if (cmd === 'w') { store.log('feedback', { verdict: 'wrong-nudge' }); say('noted: last nudge was wrong'); }
-  else if (cmd === 'm') { store.log('feedback', { verdict: 'missed-drift' }); say('noted: missed drift'); }
+  else if (cmd === 'w' || cmd === 'm') {
+    const r = companion.learnFromFeedback(cmd === 'w' ? 'wrong-nudge' : 'missed-drift', { keyword: rest.join(' ') || undefined });
+    say(r.learned ? `learned: "${r.keyword}" -> ${r.learned} for ${r.quest} (undo: forget ${r.keyword})` : `noted, nothing learned: ${r.why}`);
+  }
+  else if (cmd === 'rules') console.log(JSON.stringify(companion.rules(), null, 2));
+  else if (cmd === 'forget') { const r = companion.forgetRule(rest.join(' ')); say(r.forgotten ? `forgot "${r.forgotten}"` : 'no such rule'); }
   else if (cmd === 'r') console.log(killTestReport(store.get().log));
   else if (cmd === 'h') console.log(HELP);
   else if (cmd === 'x') { companion.stop(); rl.close(); process.exit(0); }

@@ -63,7 +63,9 @@ tool('companion_activate_quest', 'Switch the active quest by id or by part of it
 tool('companion_complete_step', 'Mark the next step of the active quest done. Awards XP (comeback bonus if soon after a nudge) and returns level-ups, titles, boss defeats.', {}, () => call('POST', '/steps/done'));
 tool('companion_add_steps', 'Append steps to a quest (active quest if no query).', { steps: z.array(z.string()).min(1), query: z.string().optional() }, (a) => call('POST', '/steps/add', a));
 tool('companion_pause', 'Pause or resume watching and nudges (e.g. during a meeting or a break).', { paused: z.boolean() }, (a) => call('POST', '/pause', a));
-tool('companion_feedback', 'Record that the last nudge was wrong, or that the user drifted and the companion missed it.', { verdict: z.enum(['wrong-nudge', 'missed-drift']) }, (a) => call('POST', '/feedback', a));
+tool('companion_feedback', 'Record that the last nudge was wrong (its trigger becomes allowed for this quest) or that the user drifted and the companion missed it (the site/app becomes a distraction for this quest). Pass keyword if the user names the site/app. Returns what was learned; tell the user and offer to undo.', { verdict: z.enum(['wrong-nudge', 'missed-drift']), keyword: z.string().optional() }, (a) => call('POST', '/feedback', a));
+tool('companion_rules', "Show the active quest's learned allow/deny keywords and the global distraction list.", {}, () => call('GET', '/rules'));
+tool('companion_forget_rule', "Undo a learned rule (remove a keyword from the active quest's allow/deny lists).", { keyword: z.string() }, (a) => call('POST', '/rules/forget', a));
 tool('companion_report', 'Kill-test style report: nudges, wrong ones, missed drifts, catch rate, returns.', {}, async () => (await call('GET', '/report')).report);
 tool('companion_import_jarvis', "Import Samir's open JARVIS operations (work/NOW.generated.md) as quests; never duplicates.", {}, () => call('POST', '/import/jarvis', {}));
 

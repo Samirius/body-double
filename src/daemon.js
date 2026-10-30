@@ -61,11 +61,9 @@ const routes = {
     return { quest: q.title, added: (b.steps || []).length };
   },
   'POST /pause': (b) => { companion.setPaused(!!b.paused); return { paused: !!b.paused }; },
-  'POST /feedback': (b) => {
-    if (!['wrong-nudge', 'missed-drift'].includes(b.verdict)) throw new Error('verdict must be wrong-nudge or missed-drift');
-    store.log('feedback', { verdict: b.verdict });
-    return { noted: b.verdict };
-  },
+  'POST /feedback': (b) => companion.learnFromFeedback(b.verdict, { keyword: b.keyword }),
+  'GET /rules': () => companion.rules(),
+  'POST /rules/forget': (b) => companion.forgetRule(b.keyword),
   'GET /report': () => ({ report: killTestReport(store.get().log) }),
   'POST /import/jarvis': (b) => {
     const added = importFromFile(b.path || JARVIS_NOW, store.get().quests);
