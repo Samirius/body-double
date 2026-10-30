@@ -21,7 +21,7 @@ test('companion: a scripted morning, end to end', async () => {
   const watcher = { sample: async () => ({ ...script.shift(), at: clock }) };
   const nudges = [], game = [];
   const ui = { nudge: async (n) => nudges.push(n), gameEvents: (e) => game.push(...e) };
-  const c = createCompanion({ store, watcher, ui, makeBrain: (cb) => createBrain({ ...cb }), driftOptions: { driftAfterSeconds: 180 }, now: () => clock });
+  const c = createCompanion({ store, watcher, ui, makeBrain: (cb) => createBrain({ ...cb }), driftOptions: { driftAfterSeconds: 180 }, timing: { morningHour: 24, eveningHour: 24 }, now: () => clock });
   c.addQuest(makeQuest({ title: 'Banafah verification', tag: 'Client Work', steps: ['Add store hours', 'Request review'], allow: ['merchant center'], deadline: '2026-11-06' }));
 
   while (script.length) { await c.tick(); clock += 15_000; }

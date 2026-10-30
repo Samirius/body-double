@@ -5,7 +5,8 @@ export const KILL_TEST = { minCatchRate: 0.8, maxWrong: 1, minRealDrifts: 5 };
 
 export function killTestReport(log, { since = 0 } = {}) {
   const entries = log.filter((e) => e.at >= since);
-  const nudges = entries.filter((e) => e.type === 'nudge');
+  // Only drift nudges count: stuck/morning/evening messages are not drift catches.
+  const nudges = entries.filter((e) => e.type === 'nudge' && (e.kind || 'drift') === 'drift');
   const wrong = entries.filter((e) => e.type === 'feedback' && e.verdict === 'wrong-nudge').length;
   const missed = entries.filter((e) => e.type === 'feedback' && e.verdict === 'missed-drift').length;
   const returned = entries.filter((e) => e.type === 'returned');

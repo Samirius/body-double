@@ -21,6 +21,8 @@ export function emptyState() {
     game: newGameState(),
     nudges: { sent: 0, returned: 0, returnSeconds: [] },
     paused: false,
+    settings: {}, // learned tuning, e.g. driftAfterSeconds
+    bookends: {}, // last day the morning/evening messages were sent
     log: [],
   };
 }

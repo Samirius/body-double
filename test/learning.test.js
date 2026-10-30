@@ -29,7 +29,7 @@ function harness(script, questOpts = {}) {
   const queue = [...script];
   const watcher = { sample: async () => { const s = queue.shift(); return s ? { ...s, idleSeconds: 0, at: clock } : null; } };
   const nudges = [];
-  const c = createCompanion({ store, watcher, ui: { nudge: async (n) => nudges.push(n) }, makeBrain: (cb) => createBrain(cb), driftOptions: { driftAfterSeconds: 60, cooldownSeconds: 120 }, now: () => clock });
+  const c = createCompanion({ store, watcher, ui: { nudge: async (n) => nudges.push(n) }, makeBrain: (cb) => createBrain(cb), driftOptions: { driftAfterSeconds: 60, cooldownSeconds: 120 }, timing: { morningHour: 24, eveningHour: 24 }, now: () => clock });
   c.addQuest(makeQuest({ title: 'Edit course video', tag: 'Creative', steps: ['Cut intro'], allow: ['premiere'], ...questOpts }));
   const run = async (n = queue.length) => { for (let i = 0; i < n; i++) { await c.tick(); clock += 15_000; } };
   return { c, store, nudges, run, push: (...s) => queue.push(...s) };

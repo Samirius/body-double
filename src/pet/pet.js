@@ -49,9 +49,14 @@ function placeBubble() {
   bubble.style.bottom = `${SPR + GROUND + 18}px`;
   bubble.style.setProperty('--tail', `${Math.max(16, Math.min(w - 30, wander.x() + SPR / 2 - left - 9))}px`);
 }
-function showBubble({ message, nextAction }) {
+function showBubble({ message, nextAction, kind = 'drift' }) {
   $('msg').textContent = message || '';
   $('next').textContent = nextAction || '';
+  // Only drift nudges can be "wrong"; day summaries and stuck offers get OK.
+  const drift = kind === 'drift';
+  $('b-wrong').style.display = drift ? '' : 'none';
+  $('b-snooze').style.display = kind === 'evening' ? 'none' : '';
+  $('b-ok').style.display = drift ? 'none' : '';
   bubble.style.display = 'block';
   state.bubbleUntil = performance.now() + 90_000;
   placeBubble();
@@ -64,6 +69,7 @@ async function act(name, payload) {
   return r;
 }
 $('b-done').onclick = async () => { hideBubble(); const r = await act('done'); if (r.ok && !r.data.events.length) floater('No open step', 'good'); };
+$('b-ok').onclick = () => hideBubble();
 $('b-snooze').onclick = async () => { hideBubble(); await act('snooze', { minutes: 10 }); floater('Snoozed 10 min', 'good'); };
 $('b-wrong').onclick = async () => {
   hideBubble();

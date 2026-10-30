@@ -52,6 +52,9 @@ test('mcp: tools drive the background service end to end', { timeout: 60_000 }, 
     const done = JSON.parse(await call('companion_complete_step'));
     assert.equal(done.events[0].amount, 10);
     assert.deepEqual(done.status.quest.boss, { hp: 1, max: 2 });
+    const today = JSON.parse(await call('companion_today'));
+    assert.equal(today.steps, 1);
+    assert.equal(today.xp, 10);
     const imported = JSON.parse(await call('companion_import_jarvis'));
     assert.equal(imported.added.length, 2);
     assert.equal(JSON.parse(await call('companion_list_quests')).length, 3);

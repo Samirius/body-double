@@ -42,3 +42,12 @@ everywhere except the pet and its speech bubble). It starts the background servi
   next step, streak and shields, skills, titles, nudge stats, all quests, JARVIS import.
 - Hotkeys: Ctrl+Alt+D done, Ctrl+Alt+P pause/resume, Ctrl+Alt+B panel.
 - Evolves at levels 5, 10 and 20 (antenna, wings, crown). Art is procedural pixel art in `src/pet/sprites.js`.
+
+## Smarter watching (settings in `.env`)
+| Setting | Default | What it does |
+|---|---|---|
+| `BD_JUDGE` | `title` | After `BD_UNCLEAR_MINUTES` on the same unknown site/app, ask the model whether it fits the quest. `title` sends the app + window title; `screenshot` also sends one downscaled screenshot (only if the model accepts images); `off` never asks. Verdicts are cached 30 min; nothing is stored. Needs a model key. |
+| `BD_UNCLEAR_MINUTES` | 6 | How long an unknown site/app may run before the judge is asked. |
+| `BD_STUCK_MINUTES` | 25 | On task this long without finishing the step: it offers to make the step smaller. |
+| `BD_MORNING_HOUR` / `BD_EVENING_HOUR` | 6 / 19 | First activity after the morning hour gets today's plan; the evening hour gets "what you won today" (only if something happened). |
+| `BD_DRIFT_SECONDS` | 180 | Starting point for how long a drift lasts before a nudge. Feedback tunes it: each wrong nudge +30 s, each missed drift −30 s (90–600 s), saved across restarts. |

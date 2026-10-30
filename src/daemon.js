@@ -27,7 +27,7 @@ const broadcast = (type, data) => { const line = `data: ${JSON.stringify({ ...da
 // Windows pop-ups are only the fallback for when nothing is listening.
 const toast = (title, text) => { if (listeners.size === 0) notify(title, text); };
 const ui = {
-  async nudge({ message, nextAction }) { toast(message, `Next: ${nextAction}`); broadcast('nudge', { message, nextAction }); },
+  async nudge({ message, nextAction, kind = 'drift' }) { toast(message, `Next: ${nextAction}`); broadcast('nudge', { message, nextAction, kind }); },
   gameEvents(events) {
     for (const e of events) {
       if (e.type === 'level-up') toast('Level up!', `You reached level ${e.level}`);
@@ -69,6 +69,7 @@ const routes = {
   'GET /rules': () => companion.rules(),
   'POST /rules/forget': (b) => companion.forgetRule(b.keyword),
   'GET /report': () => ({ report: killTestReport(store.get().log) }),
+  'GET /today': () => companion.dayActivity(),
   // Lets the pet's self-test replay events; only with BD_DEBUG=1.
   'POST /debug/emit': (b) => {
     if (env.BD_DEBUG !== '1') throw new Error('debug routes are off');

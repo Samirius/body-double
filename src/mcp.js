@@ -29,6 +29,7 @@ tool('companion_pause', 'Pause or resume watching and nudges (e.g. a meeting or 
 tool('companion_feedback', 'Record that the last nudge was wrong (its trigger becomes allowed for this quest) or that the user drifted and the companion missed it (the site/app becomes a distraction for this quest). Pass keyword if the user names the site/app. Returns what was learned; tell the user and offer to undo.', { verdict: z.enum(['wrong-nudge', 'missed-drift']), keyword: z.string().optional() }, (a) => call('POST', '/feedback', a));
 tool('companion_rules', "Show the active quest's learned allow/deny keywords and the global distraction list.", {}, () => call('GET', '/rules'));
 tool('companion_forget_rule', "Undo a learned rule (remove a keyword from the active quest's allow/deny lists).", { keyword: z.string() }, (a) => call('POST', '/rules/forget', a));
+tool('companion_today', "Today's activity: steps done, XP, drift nudges and how many turned around, median return time, titles, bosses defeated.", {}, () => call('GET', '/today'));
 tool('companion_report', 'Kill-test style report: nudges, wrong ones, missed drifts, catch rate, returns.', {}, async () => (await call('GET', '/report')).report);
 tool('companion_import_jarvis', "Import Samir's open JARVIS operations (work/NOW.generated.md) as quests; never duplicates.", {}, () => call('POST', '/import/jarvis', {}));
 

@@ -5,6 +5,7 @@
 //   'returned' back on task after a nudged drift (with seconds to return)
 //   'away' / 'back' idle beyond the away threshold and back again
 
+// driftAfterSeconds may be a number or a function (so learned timing applies live).
 export const DEFAULT_DRIFT = { driftAfterSeconds: 180, cooldownSeconds: 300 };
 
 export function createDriftTracker(opts = {}) {
@@ -26,7 +27,8 @@ export function createDriftTracker(opts = {}) {
         if (!episode) episode = { start: at, lastNudgeAt: null, nudges: 0 };
         const driftedFor = (at - episode.start) / 1000;
         const sinceNudge = episode.lastNudgeAt ? (at - episode.lastNudgeAt) / 1000 : Infinity;
-        if (driftedFor >= cfg.driftAfterSeconds && sinceNudge >= cfg.cooldownSeconds) {
+        const threshold = typeof cfg.driftAfterSeconds === 'function' ? cfg.driftAfterSeconds() : cfg.driftAfterSeconds;
+        if (driftedFor >= threshold && sinceNudge >= cfg.cooldownSeconds) {
           episode.nudges += 1;
           episode.lastNudgeAt = at;
           pendingReturn = { nudgedAt: at, driftStart: episode.start };
