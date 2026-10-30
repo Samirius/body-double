@@ -51,6 +51,17 @@ function mouth(g, cx, cy, kind) {
   else if (kind === 'wavy') stamp(g, x - 1, y + 1, ['k.k.', '.k.k']);
 }
 
+function arms(g, cx, cy, rx, pose, t) {
+  const L = Math.round(cx - rx - 1), R = Math.round(cx + rx), y = Math.round(cy + 1);
+  const down = ['o', 'o'];
+  if (pose === 'cheer') { stamp(g, L - 1, y - 3, ['o.', '.o', '.o']); stamp(g, R, y - 3, ['.o', 'o.', 'o.']); return; }
+  if (pose === 'sleep') return; // tucked in
+  stamp(g, L, y, down);
+  if (pose === 'talk' && Math.floor(t * 4) % 2 === 0) stamp(g, R, y - 2, ['.o', 'o.']);
+  else stamp(g, R, y, down);
+
+}
+
 function feet(g, cx, footY, phase) {
   const lift = (i) => (phase === 0 ? 0 : (phase === 1) === (i === 0) ? -1 : 0);
   stamp(g, Math.round(cx - 6), footY + lift(0), ['oddo', '.oo.'], { d: 'd' });
@@ -59,8 +70,8 @@ function feet(g, cx, footY, phase) {
 
 function accessories(g, stage, cx, top, layer) {
   if (layer === 'back' && stage >= 3) {
-    stamp(g, Math.round(cx - 12), Math.round(top + 6), ['..oo', '.oww', 'owww', '.oww', '..oo']);
-    stamp(g, Math.round(cx + 8), Math.round(top + 6), ['oo..', 'wwo.', 'wwwo', 'wwo.', 'oo..']);
+    stamp(g, Math.round(cx - 12), Math.round(top + 2), ['..oo', '.oww', 'owww', '.oww', '..oo']);
+    stamp(g, Math.round(cx + 8), Math.round(top + 2), ['oo..', 'wwo.', 'wwwo', 'wwo.', 'oo..']);
   }
   if (layer !== 'front') return;
   if (stage === 2 || stage === 3) {
@@ -73,8 +84,8 @@ function accessories(g, stage, cx, top, layer) {
 function overlay(g, kind, t) {
   if (kind === 'zzz') {
     const off = Math.floor(t * 2) % 3;
-    stamp(g, 17, 4 - off, ['zzz', '.z.', 'zzz']);
-    if (off > 0) stamp(g, 21, 1 - (off - 1), ['zz', 'zz']);
+    stamp(g, 16, 5 - off, ['zzzz', '..z.', '.z..', 'zzzz']);
+    if (off > 0) stamp(g, 21, 2 - off, ['zzz', '.z.', 'zzz'].map((r, i) => (i === 1 ? '.z.' : r)));
   }
   if (kind === 'sparkles') {
     const on = Math.floor(t * 6) % 2 === 0;
@@ -98,6 +109,7 @@ export function buildFrame({ state = 'idle', t = 0, stage = 1, facing = 1 } = {}
 
   accessories(g, stage, cx, top, 'back');
   body(g, cx, cy, rx, ry);
+  arms(g, cx, cy, rx, state, t);
   feet(g, cx, Math.round(13.5 + 7.6) - 1, phase);
   const blink = state === 'idle' && t % 4 > 3.85;
   const eyeKind = state === 'sleep' ? 'closed' : state === 'cheer' ? 'happy' : state === 'worry' ? 'worry' : blink ? 'blink' : 'open';

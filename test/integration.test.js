@@ -55,6 +55,9 @@ test('mcp: tools drive the background service end to end', { timeout: 60_000 }, 
     const today = JSON.parse(await call('companion_today'));
     assert.equal(today.steps, 1);
     assert.equal(today.xp, 10);
+    const stats = JSON.parse(await call('companion_stats'));
+    assert.equal(stats.totals.steps, 1);
+    assert.ok((await import('node:fs')).existsSync(stats.htmlPath), 'stats page written');
     const imported = JSON.parse(await call('companion_import_jarvis'));
     assert.equal(imported.added.length, 2);
     assert.equal(JSON.parse(await call('companion_list_quests')).length, 3);

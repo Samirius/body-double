@@ -6,7 +6,7 @@
 //  - talks to the background service through src/client.js (starts it if needed)
 //   npm run pet                     run
 //   npm run pet -- --selftest <dir> render, screenshot both windows, quit
-import { app, BrowserWindow, ipcMain, screen, Tray, Menu, nativeImage, globalShortcut } from 'electron';
+import { app, BrowserWindow, ipcMain, screen, Tray, Menu, nativeImage, globalShortcut, shell } from 'electron';
 import path from 'node:path';
 import { writeFileSync, mkdirSync, readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
@@ -60,6 +60,7 @@ function createTray() {
     { label: 'Mark next step done', click: () => act('done') },
     { label: 'Pause / resume', click: () => act('pause-toggle') },
     { label: 'Snooze 10 minutes', click: () => act('snooze', { minutes: 10 }) },
+    { label: 'Open stats page', click: () => act('stats').catch(() => {}) },
     { type: 'separator' },
     { label: 'Quit pet (service keeps running)', click: () => app.quit() },
   ]));
@@ -79,6 +80,7 @@ async function act(name, payload = {}) {
     case 'activate': return client.call('POST', '/quests/activate', { query: String(payload.query || '') });
     case 'import': return client.call('POST', '/import/jarvis', {});
     case 'panel': return togglePanel();
+    case 'stats': { const r = await client.call('GET', '/stats'); await shell.openPath(r.htmlPath); return r.totals; }
     default: throw new Error(`unknown action ${name}`);
   }
 }

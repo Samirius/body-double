@@ -12,6 +12,7 @@ import { makeQuest } from './core/store.js';
 import { notify } from './ui/notify.js';
 import { killTestReport } from './report.js';
 import { importFromFile } from './jarvis.js';
+import { buildStats, renderStatsHtml } from './stats.js';
 
 if (existsSync('.env')) process.loadEnvFile('.env');
 const env = process.env;
@@ -70,6 +71,13 @@ const routes = {
   'POST /rules/forget': (b) => companion.forgetRule(b.keyword),
   'GET /report': () => ({ report: killTestReport(store.get().log) }),
   'GET /today': () => companion.dayActivity(),
+  // Writes the stats page next to the data and returns the numbers.
+  'GET /stats': () => {
+    const stats = buildStats(store.get());
+    const htmlPath = path.join(path.dirname(store.file), 'stats.html');
+    writeFileSync(htmlPath, renderStatsHtml(stats));
+    return { htmlPath, totals: stats.totals, perDay: stats.perDay, driftsByHour: stats.driftsByHour, judged: stats.judged };
+  },
   // Lets the pet's self-test replay events; only with BD_DEBUG=1.
   'POST /debug/emit': (b) => {
     if (env.BD_DEBUG !== '1') throw new Error('debug routes are off');

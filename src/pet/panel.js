@@ -81,6 +81,7 @@ $('a-done').onclick = run('done');
 $('a-snooze').onclick = run('snooze', { minutes: 10 });
 $('a-pause').onclick = run('pause-toggle');
 $('a-import').onclick = run('import');
+$('a-stats').onclick = run('stats');
 $('close').onclick = () => window.bd.act('panel');
 window.bd.onRefresh(refresh);
 window.bd.onEvent((ev) => { if (ev.type === 'game' || ev.type === 'hello') refresh(); });
