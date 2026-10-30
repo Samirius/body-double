@@ -71,6 +71,11 @@ const routes = {
   'POST /rules/forget': (b) => companion.forgetRule(b.keyword),
   'GET /report': () => ({ report: killTestReport(store.get().log) }),
   'GET /today': () => companion.dayActivity(),
+  // Answer at once and judge in the background, so the Claude hook never slows a prompt down.
+  'POST /activity/chat': (b) => {
+    companion.noteChat(String(b.text || '')).catch((e) => store.log('chat-error', { error: String(e.message || e).slice(0, 200) }));
+    return { accepted: true };
+  },
   // Writes the stats page next to the data and returns the numbers.
   'GET /stats': () => {
     const stats = buildStats(store.get());

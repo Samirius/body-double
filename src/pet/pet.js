@@ -53,7 +53,7 @@ function showBubble({ message, nextAction, kind = 'drift' }) {
   $('msg').textContent = message || '';
   $('next').textContent = nextAction || '';
   // Only drift nudges can be "wrong"; day summaries and stuck offers get OK.
-  const drift = kind === 'drift';
+  const drift = kind === 'drift' || kind === 'chat';
   $('b-wrong').style.display = drift ? '' : 'none';
   $('b-snooze').style.display = kind === 'evening' ? 'none' : '';
   $('b-ok').style.display = drift ? 'none' : '';

@@ -16,7 +16,7 @@ what keeps going.
 ## Quick start (Windows, Node 22+)
 ```bash
 npm install
-npm test            # 43 tests, no API key needed
+npm test            # 47 tests, no API key needed
 npm run test:pet    # launches the real pet, drives it, saves 4 screenshots, checks them
 npm run pet         # the pixel familiar (starts the background service if needed)
 ```
@@ -39,6 +39,12 @@ ZAI_API_KEY=...             # z.ai (GLM 5.3) with BD_PROVIDER=zai
   Ctrl+Alt+B) for the panel: level, XP, active quest with boss HP and deadline, next step, streak, skills, titles,
   nudge stats, quest switcher, JARVIS import, stats page. Hotkeys: Ctrl+Alt+D done, Ctrl+Alt+P pause.
 - **Terminal.** `npm start`: single-letter commands (`add`, `d`, `s`, `p`, `w`, `m`, `rules`, `forget`, `r`).
+
+## Optional, one command each (you run them; each backs up and has `--remove`)
+- `node scripts/autostart.mjs`: start the pet (and service) at Windows login (Startup-folder shortcut).
+- `node scripts/register-hook.mjs`: let it notice when a **Claude chat** drifts from your active quest. Each prompt is
+  judged once (needs a model key); off-topic chats get one gentle "park the idea" nudge at most every 30 min. The
+  hook never prints into the chat, never slows a prompt, and the text is never stored.
 
 ## How it decides
 ```

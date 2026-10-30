@@ -40,6 +40,7 @@ export function createCompanion({ store, watcher, makeBrain, ui, judge = null, c
   const verdicts = new Map(); // site key -> { label, until, reason } (judge cache)
   let unclearRun = null; // { key, since }
   let onTaskMs = 0; // on-task time since the last finished step (for "stuck")
+  let lastChatNudgeAt = 0; // chat-drift nudges at most every 30 min
 
   const nextStep = (q) => q?.steps.find((s) => !s.done) || null;
   const lower = (x) => String(x || '').trim().toLowerCase();
@@ -250,8 +251,24 @@ export function createCompanion({ store, watcher, makeBrain, ui, judge = null, c
     } finally { busy = false; }
   }
 
+  // A message the user sent to an AI assistant (Claude Code hook). If a quest
+  // is active and the judge says the chat is clearly about something else,
+  // one gentle nudge (at most every 30 min). The text is never stored.
+  async function noteChat(text) {
+    const quest = store.activeQuest();
+    if (!quest || !judge || judge.mode === 'off' || store.get().paused) return { checked: false, why: !quest ? 'no active quest' : 'judge off or paused' };
+    const r = await judge.judge({ quest, nextStep: nextStep(quest), sample: { app: 'AI chat', title: String(text).slice(0, 300) }, minutes: 0 });
+    log('chat-judged', { verdict: r.verdict, source: r.source });
+    if (r.verdict !== 'off-task') return { checked: true, verdict: r.verdict };
+    if (now() - lastChatNudgeAt < 30 * 60_000) return { checked: true, verdict: r.verdict, nudged: false, why: 'cooldown' };
+    lastChatNudgeAt = now();
+    await speak('chat', { type: 'chat', reason: r.reason });
+    return { checked: true, verdict: r.verdict, nudged: true };
+  }
+
   return {
     tick,
+    noteChat,
     start() { if (!timer) { timer = setInterval(tick, sampleEverySeconds * 1000); tick(); } },
     stop() { clearInterval(timer); timer = null; watcher.stop?.(); },
     learnFromFeedback,

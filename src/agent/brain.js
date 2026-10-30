@@ -47,6 +47,7 @@ export function templateNudge({ quest, nextStep, event }) {
     case 'stuck': return { message: `${mins(event.onTaskSeconds)} min on this step. Make it smaller?`, nextAction: step ? `Do only the first line of: ${step}` : 'Write the very next tiny action' };
     case 'morning': return { message: event.summary || `Good morning. ${what} is up first.`, nextAction: step || 'Choose today\'s first quest' };
     case 'evening': return { message: event.summary || 'Day done.', nextAction: step ? `Tomorrow, start with: ${step}` : 'Pick tomorrow\'s first step' };
+    case 'chat': return { message: `This chat is not about ${what}. Park the idea and come back?`, nextAction: step ? `Save the idea in one line, then: ${step}` : 'Save the idea in one line, then return to your quest' };
     default:
       // Without a quest, "your quest is waiting" means nothing: ask for one thing instead.
       if (!quest) return { message: event.nudgeNumber > 1 ? 'Still drifting, and no quest yet.' : 'No quest yet, and you have drifted a while.', nextAction: 'Pick one thing for the next 25 minutes and tell me' };
@@ -64,6 +65,7 @@ export function buildPrompt({ quest, nextStep, event, stats, now = new Date() })
     stuck: () => `on task for ${mins(event.onTaskSeconds)} min without finishing the step (possibly stuck)`,
     morning: () => `start of the day. ${event.summary || ''}`,
     evening: () => `end of the day. ${event.summary || ''}`,
+    chat: () => `they are chatting with an AI assistant about something unrelated to the quest (${event.reason || 'off-topic'}); suggest parking the idea in one line`,
   }[event.type]?.() || event.type;
   return [
     `Event: ${what}.`,
