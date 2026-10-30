@@ -52,3 +52,12 @@ test('brain: prompt carries quest, step, drift length and history, never a windo
   assert.match(p, /Write the store hours/);
   assert.match(p, /median 90 s/);
 });
+
+test('brain: with no active quest the template asks for one thing instead of "your quest"', async () => {
+  const shown = [];
+  const brain = createBrain({ onNudge: async (n) => shown.push(n), onSplit: async () => {} });
+  await brain.handle({ quest: null, nextStep: null, event: { type: 'drift', driftedSeconds: 200, nudgeNumber: 1 }, stats });
+  assert.match(shown[0].message, /No quest yet/);
+  assert.match(shown[0].nextAction, /Pick one thing/);
+  assert.doesNotMatch(shown[0].message, /your quest/);
+});

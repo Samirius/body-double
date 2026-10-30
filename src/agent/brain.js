@@ -15,7 +15,7 @@ export const SYSTEM_PROMPT = `You are a calm, warm focus companion for someone w
 Rules for every message:
 - Lead with ONE concrete next action they can do in under 2 minutes ("Open the Merchant Center tab", not "get back to work").
 - At most 2 short sentences. No guilt, no lectures, no exclamation-mark cheerleading.
-- Name their quest so they remember what matters. Never invent XP numbers; the game shows those.
+- Name their quest so they remember what matters. If there is no quest, ask them to pick one thing for the next 25 minutes. Never invent XP numbers; the game shows those.
 - If the current step is vague or big (or they are stuck), call split_step with 2-5 tiny steps, then nudge toward the first.
 - Morning: name today's most urgent quest and its first step. Evening: celebrate what was done, honestly, and name tomorrow's first step.
 Always respond by calling a tool: nudge, or split_step followed by nudge.`;
@@ -47,7 +47,10 @@ export function templateNudge({ quest, nextStep, event }) {
     case 'stuck': return { message: `${mins(event.onTaskSeconds)} min on this step. Make it smaller?`, nextAction: step ? `Do only the first line of: ${step}` : 'Write the very next tiny action' };
     case 'morning': return { message: event.summary || `Good morning. ${what} is up first.`, nextAction: step || 'Choose today\'s first quest' };
     case 'evening': return { message: event.summary || 'Day done.', nextAction: step ? `Tomorrow, start with: ${step}` : 'Pick tomorrow\'s first step' };
-    default: return {
+    default:
+      // Without a quest, "your quest is waiting" means nothing: ask for one thing instead.
+      if (!quest) return { message: event.nudgeNumber > 1 ? 'Still drifting, and no quest yet.' : 'No quest yet, and you have drifted a while.', nextAction: 'Pick one thing for the next 25 minutes and tell me' };
+      return {
       message: event.nudgeNumber > 1 ? `Still drifting. ${what} is waiting.` : `Quick check: ${what}?`,
       nextAction: step || `Open the window you need for ${what}`,
     };

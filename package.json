@@ -11,7 +11,8 @@
     "pet": "electron src/pet/main.js",
     "test:pet": "node scripts/pet-selftest.mjs",
     "stats": "node scripts/stats.mjs",
-    "sprites": "node scripts/sprite-sheet.mjs docs/sprites.png 6"
+    "sprites": "node scripts/sprite-sheet.mjs docs/sprites.png 6",
+    "video": "node video/build.mjs"
   },
   "keywords": [],
   "author": "",
