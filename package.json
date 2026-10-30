@@ -1,0 +1,19 @@
+{
+  "name": "body-double",
+  "version": "1.0.0",
+  "description": "Proactive ADHD focus companion with a pixel pet (working name)",
+  "main": "index.js",
+  "scripts": {
+    "test": "node --test test/core.test.js test/brain.test.js test/companion.test.js",
+    "start": "node src/cli.js"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "module",
+  "private": "true",
+  "dependencies": {
+    "@earendil-works/pi-agent-core": "^1.4.0",
+    "@earendil-works/pi-ai": "^1.4.0"
+  }
+}
