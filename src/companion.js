@@ -77,7 +77,15 @@ export function createCompanion({ store, watcher, makeBrain, ui, rules = DEFAULT
       store.update((st) => ({ ...st, quests: [...st.quests, quest], activeQuestId: activate ? quest.id : st.activeQuestId }));
       store.log('quest-added', { title: quest.title });
     },
-    setActiveQuest(id) { store.update((st) => ({ ...st, activeQuestId: id })); },
+    setActiveQuest(id) { store.update((st) => ({ ...st, activeQuestId: id })); store.log('quest-activated', { id }); },
+    addSteps(questId, steps) {
+      store.update((st) => ({ ...st, quests: st.quests.map((q) => (q.id === questId ? { ...q, steps: [...q.steps, ...steps.map((text) => ({ id: newId('s'), text, done: false }))] } : q)) }));
+      store.log('steps-added', { count: steps.length });
+    },
+    listQuests() {
+      const st = store.get();
+      return st.quests.map((q) => ({ id: q.id, title: q.title, tag: q.tag, active: q.id === st.activeQuestId, deadline: q.deadline, done: q.steps.filter((s) => s.done).length, total: q.steps.length, next: nextStep(q)?.text || null }));
+    },
     completeNextStep() {
       const quest = store.activeQuest();
       const step = nextStep(quest);

@@ -18,7 +18,7 @@ $n.Dispose()
 `;
 
 export function notify(title, text) {
-  if (process.platform !== 'win32') return;
+  if (process.platform !== 'win32' || process.env.BD_NOTIFY === 'off') return;
   const child = spawn('powershell.exe', ['-NoProfile', '-NonInteractive', '-WindowStyle', 'Hidden', '-Command', SCRIPT], {
     windowsHide: true, detached: true, stdio: 'ignore',
     env: { ...process.env, BD_TITLE: String(title).slice(0, 63), BD_TEXT: String(text).slice(0, 255) },

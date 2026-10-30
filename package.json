@@ -4,8 +4,10 @@
   "description": "Proactive ADHD focus companion with a pixel pet (working name)",
   "main": "index.js",
   "scripts": {
-    "test": "node --test test/core.test.js test/brain.test.js test/companion.test.js",
-    "start": "node src/cli.js"
+    "test": "node --test test/core.test.js test/brain.test.js test/companion.test.js test/integration.test.js",
+    "start": "node src/cli.js",
+    "daemon": "node src/daemon.js",
+    "mcp": "node src/mcp.js"
   },
   "keywords": [],
   "author": "",
@@ -14,6 +16,8 @@
   "private": "true",
   "dependencies": {
     "@earendil-works/pi-agent-core": "^1.4.0",
-    "@earendil-works/pi-ai": "^1.4.0"
+    "@earendil-works/pi-ai": "^1.4.0",
+    "@modelcontextprotocol/sdk": "1.32.1",
+    "zod": "3.25.76"
   }
 }

@@ -22,3 +22,12 @@ Tuning: `BD_DRIFT_SECONDS` (default 180), `BD_SAMPLE_SECONDS` (default 15).
 ## Privacy
 Only the app name and the rule that fired are logged. Window titles and screenshots are never stored.
 Data lives in `%APPDATA%\body-double\state.json`.
+
+## Talk to it through Claude (no terminal needed)
+The companion runs as a background service (`npm run daemon`, 127.0.0.1 only, token in `%APPDATA%\body-double\daemon.json`).
+An MCP server (`src/mcp.js`) gives Claude tools: `companion_status`, `companion_add_quest`, `companion_complete_step`,
+`companion_activate_quest`, `companion_add_steps`, `companion_pause`, `companion_feedback`, `companion_report`,
+`companion_import_jarvis`. It starts the background service automatically when needed.
+
+Register it once (backs up `~/.claude.json`, adds one entry): `node scripts/register-mcp.mjs` (remove with `--remove`).
+Then just tell Claude: "I'm starting Banafah, steps are…", "done with that", "how am I doing?".
