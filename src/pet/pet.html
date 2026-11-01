@@ -49,6 +49,12 @@
   @keyframes glitchrise { 0% { opacity: 0; transform: translate(0, 14px) skewX(0); } 8% { opacity: 1; transform: translate(-4px, 0) skewX(-12deg); } 12% { transform: translate(4px, 0) skewX(10deg); } 16% { transform: translate(0, 0) skewX(0); } 100% { opacity: 0; transform: translateY(-90px); } }
   @keyframes boot { 0% { opacity: 0; transform: scaleY(.05); } 60% { opacity: 1; transform: scaleY(1.04); } 100% { transform: scaleY(1); } }
   @keyframes blink { 50% { opacity: 0; } }
+  /* Quick menu at the pet */
+  .menu { position: absolute; display: none; gap: 6px; padding: 6px; background: var(--glass); border: 1px solid var(--cyan); box-shadow: 0 0 16px rgba(0,240,255,.35);
+    clip-path: polygon(0 0, calc(100% - 10px) 0, 100% 10px, 100% 100%, 10px 100%, 0 calc(100% - 10px)); animation: boot .18s steps(3) both; }
+  .menu button { cursor: pointer; padding: 7px 10px; font: 700 11px var(--mono); letter-spacing: .1em; color: var(--cyan); background: transparent; border: 1px solid #2a5a78; }
+  .menu button:hover { background: var(--cyan); color: var(--void); }
+  .menu button.stop { color: var(--red); border-color: #6a2a3a; } .menu button.stop:hover { background: var(--red); color: var(--void); }
   .offline { position: absolute; right: 12px; bottom: 6px; font: 11px var(--mono); letter-spacing: .1em; color: var(--red); display: none; text-shadow: 0 0 6px var(--red); }
 </style>
 </head>
@@ -68,6 +74,9 @@
       </div>
     </div>
     <div class="tail"></div>
+  </div>
+  <div class="menu" id="menu">
+    <button data-min="25">FOCUS 25</button><button data-min="50">FOCUS 50</button><button class="stop" id="m-stop">STOP</button><button id="m-hud">HUD</button>
   </div>
   <div class="offline" id="offline">// LINK LOST — RECONNECTING</div>
   <script type="module" src="pet.js"></script>

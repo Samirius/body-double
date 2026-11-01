@@ -31,6 +31,7 @@ tool('companion_rules', "Show the active quest's learned allow/deny keywords and
 tool('companion_forget_rule', "Undo a learned rule (remove a keyword from the active quest's allow/deny lists).", { keyword: z.string() }, (a) => call('POST', '/rules/forget', a));
 tool('companion_today', "Today's activity: steps done, XP, drift nudges and how many turned around, median return time, titles, bosses defeated.", {}, () => call('GET', '/today'));
 tool('companion_stats', 'All-time evidence from real use (n = 1): totals, per-day rows, drifts by hour, judge verdicts. Also writes a standalone stats page and returns its path.', {}, () => call('GET', '/stats'));
+tool('companion_session', 'Start a focus session (timer ring around the pet; 25 or 50 min usually) or stop it. A session ends with a short break.', { action: z.enum(['start', 'stop']), minutes: z.number().int().min(5).max(120).optional() }, (a) => call('POST', '/session', a));
 tool('companion_park', 'Park a distraction or idea for later instead of following it now (the Vault). With a note it parks that idea (e.g. a new project idea from this chat); without one it parks whatever window the user was just on.', { note: z.string().optional() }, (a) => call('POST', '/vault/park', a));
 tool('companion_vault', 'List parked items (newest first) so the user can come back to them at a good time.', {}, () => call('GET', '/vault'));
 tool('companion_report', 'Kill-test style report: nudges, wrong ones, missed drifts, catch rate, returns.', {}, async () => (await call('GET', '/report')).report);

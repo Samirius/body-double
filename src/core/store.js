@@ -24,6 +24,7 @@ export function emptyState() {
     settings: {}, // learned tuning, e.g. driftAfterSeconds
     bookends: {}, // last day the morning/evening messages were sent
     vault: [], // parked distractions/ideas (explicit user action)
+    session: null, // current focus session or break (timer ring)
     log: [],
   };
 }

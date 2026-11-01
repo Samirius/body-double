@@ -47,6 +47,9 @@ export function templateNudge({ quest, nextStep, event }) {
     case 'stuck': return { message: `${mins(event.onTaskSeconds)} min on this step. Make it smaller?`, nextAction: step ? `Do only the first line of: ${step}` : 'Write the very next tiny action' };
     case 'morning': return { message: event.summary || `Good morning. ${what} is up first.`, nextAction: step || 'Choose today\'s first quest' };
     case 'evening': return { message: event.summary || 'Day done.', nextAction: step ? `Tomorrow, start with: ${step}` : 'Pick tomorrow\'s first step' };
+    case 'session-start': return { message: `${event.minutes}:00 on the clock${quest ? ` for ${what}` : ''}. I'll keep watch.`, nextAction: step ? `First, just: ${step}` : 'First, just open what you need' };
+    case 'session-end': return { message: `${event.minutes} minutes done. That counts.`, nextAction: `Stand up and drink water (${event.breakMinutes} min break)` };
+    case 'break-end': return { message: 'Break over. Back in?', nextAction: step || 'Pick the next tiny step' };
     case 'chat': return { message: `This chat is not about ${what}. Park the idea and come back?`, nextAction: step ? `Save the idea in one line, then: ${step}` : 'Save the idea in one line, then return to your quest' };
     default:
       // Without a quest, "your quest is waiting" means nothing: ask for one thing instead.

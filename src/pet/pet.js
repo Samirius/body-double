@@ -10,7 +10,7 @@ const ctx = canvas.getContext('2d');
 const bubble = document.getElementById('bubble');
 const $ = (id) => document.getElementById(id);
 
-const state = { label: null, paused: false, stage: 1, cheerUntil: 0, bubbleUntil: 0, connected: true };
+const state = { label: null, paused: false, stage: 1, cheerUntil: 0, bubbleUntil: 0, connected: true, session: null };
 const wander = createWanderer({ width: () => innerWidth, sprite: SPR });
 
 function resize() { canvas.width = innerWidth; canvas.height = innerHeight; ctx.imageSmoothingEnabled = false; }
@@ -42,10 +42,49 @@ function loop(now) {
   wander.step(dt, { canMove: pose === 'idle' || pose === 'walk' || pose === 'worry' });
   ctx.clearRect(0, 0, canvas.width, canvas.height);
   draw(buildFrame({ state: pose, t, stage: state.stage, facing: wander.facing() }), wander.x(), canvas.height - SPR - GROUND);
+  drawRing(Date.now());
   if (talking) placeBubble();
+  if (menu.style.display === 'flex') placeMenu();
   requestAnimationFrame(loop);
 }
 requestAnimationFrame(loop);
+
+// --- timer ring (focus session / break) -------------------------------------
+function drawRing(nowMs) {
+  const s = state.session;
+  if (!s) return;
+  const total = s.endAt - s.startAt, left = Math.max(0, s.endAt - nowMs);
+  const r = SPR * 0.62, cx = wander.x() + SPR / 2, cy = canvas.height - r - 4; // whole ring stays inside the strip
+  const color = s.kind === 'break' ? '#39ff9a' : '#00f0ff';
+  ctx.save();
+  ctx.lineWidth = 4;
+  ctx.strokeStyle = 'rgba(40, 44, 90, .55)';
+  ctx.beginPath(); ctx.arc(cx, cy, r, 0, Math.PI * 2); ctx.stroke();
+  // Segmented arc for the time that is left, draining clockwise from the top.
+  ctx.strokeStyle = color; ctx.shadowColor = color; ctx.shadowBlur = 10; ctx.setLineDash([9, 3]);
+  ctx.beginPath(); ctx.arc(cx, cy, r, -Math.PI / 2, -Math.PI / 2 + (Math.PI * 2 * left) / total); ctx.stroke();
+  ctx.setLineDash([]); ctx.shadowBlur = 6;
+  const mm = String(Math.floor(left / 60000)).padStart(2, '0'), ss = String(Math.floor((left % 60000) / 1000)).padStart(2, '0');
+  ctx.font = '700 13px "Cascadia Mono", Consolas, monospace'; ctx.textAlign = 'center'; ctx.fillStyle = color;
+  ctx.fillText(`${s.kind === 'break' ? 'BREAK' : 'FOCUS'} ${mm}:${ss}`, cx, cy - r - 8);
+  ctx.restore();
+}
+
+// --- quick menu at the pet ---------------------------------------------------
+const menu = $('menu');
+function placeMenu() {
+  const w = menu.offsetWidth || 300;
+  menu.style.left = `${Math.max(8, Math.min(innerWidth - w - 8, wander.x() + SPR / 2 - w / 2))}px`;
+  menu.style.bottom = `${SPR + GROUND + 34}px`;
+}
+function toggleMenu(show = menu.style.display !== 'flex') {
+  $('m-stop').style.display = state.session ? '' : 'none';
+  menu.style.display = show ? 'flex' : 'none';
+  if (show) placeMenu();
+}
+menu.querySelectorAll('button[data-min]').forEach((b) => { b.onclick = async () => { toggleMenu(false); await act('session', { minutes: Number(b.dataset.min) }); refreshStatus(); }; });
+$('m-stop').onclick = async () => { toggleMenu(false); await act('session', { action: 'stop' }); refreshStatus(); };
+$('m-hud').onclick = () => { toggleMenu(false); act('panel'); };
 
 // --- transmission bubble ---------------------------------------------------
 const KIND = {
@@ -53,6 +92,9 @@ const KIND = {
   chat: { title: 'SIGNAL // OFF-QUEST CHAT', accent: '#ff2bd6' },
   stuck: { title: 'ASSIST // STEP TOO BIG?', accent: '#f5ff3b' },
   morning: { title: 'BOOT // TODAY’S RUN', accent: '#00f0ff' },
+  'session-start': { title: 'SESSION // ENGAGED', accent: '#00f0ff' },
+  'session-end': { title: 'SESSION // COMPLETE', accent: '#39ff9a' },
+  'break-end': { title: 'BREAK // OVER', accent: '#00f0ff' },
   evening: { title: 'LOG // RUN COMPLETE', accent: '#39ff9a' },
 };
 function placeBubble() {
@@ -132,12 +174,14 @@ addEventListener('mousemove', (e) => {
   const overPet = e.clientX >= px + 8 && e.clientX <= px + SPR - 8 && e.clientY >= py + 16 && e.clientY <= py + SPR;
   const b = bubble.style.display === 'block' ? bubble.getBoundingClientRect() : null;
   const overBubble = !!b && e.clientX >= b.left && e.clientX <= b.right && e.clientY >= b.top && e.clientY <= b.bottom;
-  const want = overPet || overBubble;
+  const m = menu.style.display === 'flex' ? menu.getBoundingClientRect() : null;
+  const overMenu = !!m && e.clientX >= m.left && e.clientX <= m.right && e.clientY >= m.top && e.clientY <= m.bottom;
+  const want = overPet || overBubble || overMenu;
   if (want !== interactive) { interactive = want; window.bd.setInteractive(want); document.body.style.cursor = overPet ? 'pointer' : 'default'; }
 });
 canvas.addEventListener('click', (e) => {
   const px = wander.x();
-  if (e.clientX >= px && e.clientX <= px + SPR) act('panel');
+  if (e.clientX >= px && e.clientX <= px + SPR) toggleMenu();
 });
 
 // --- live events -----------------------------------------------------------
@@ -147,13 +191,14 @@ async function refreshStatus() {
   state.paused = r.data.paused;
   if (r.data.label) state.label = r.data.label;
   state.stage = petStage(r.data.level.level);
+  state.session = r.data.session || null;
   applyGlow();
 }
 
 window.bd.onConnection((s) => { state.connected = s === 'connected'; $('offline').style.display = state.connected ? 'none' : 'block'; if (state.connected) refreshStatus(); });
 window.bd.onEvent((ev) => {
   if (ev.type === 'hello') { state.paused = ev.status.paused; state.label = ev.status.label; state.stage = petStage(ev.status.level.level); applyGlow(); return; }
-  if (ev.type === 'status') { if (ev.label) state.label = ev.label; if (typeof ev.paused === 'boolean') state.paused = ev.paused; applyGlow(); return; }
+  if (ev.type === 'status') { if ('session' in ev) state.session = ev.session; if (ev.label) state.label = ev.label; if (typeof ev.paused === 'boolean') state.paused = ev.paused; applyGlow(); return; }
   if (ev.type === 'nudge') { showBubble(ev); return; }
   if (ev.type !== 'game' || !ev.game) return;
   const g = ev.game;
@@ -168,6 +213,7 @@ window.bd.onEvent((ev) => {
     case 'pet-evolved': state.stage = g.stage; floater('FAMILIAR EVOLVED', 'big'); cheer(4000); break;
     case 'shield-used': floater('STREAK SHIELD USED', 'good'); break;
     case 'returned': floater('BACK ON QUEST', 'good'); cheer(1500); hideBubble(); break;
+    case 'session-done': floater(`SESSION COMPLETE // ${g.minutes} MIN`, 'big'); cheer(3000); break;
     case 'parked': break; // the Park button already confirmed it
     default: break;
   }

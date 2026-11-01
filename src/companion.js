@@ -16,7 +16,8 @@ export const DEFAULT_TIMING = {
   unclearMinutes: 6, // same unclear site/app this long -> ask the judge
   judgeCacheMinutes: 30, // a verdict holds this long for that site/app
   stuckMinutes: 25, // on task this long without finishing the step -> offer to split
-  commAllowanceMinutes: 10, // messaging apps count as drift only after this much continuous time
+  commAllowanceMinutes: 10,
+  breakMinutes: 5, // after a focus session // messaging apps count as drift only after this much continuous time
   morningHour: 6, eveningHour: 19,
   driftAfterSeconds: 180, minDriftAfter: 90, maxDriftAfter: 600, driftStep: 30,
 };
@@ -135,6 +136,7 @@ export function createCompanion({ store, watcher, makeBrain, ui, judge = null, c
   async function react(event) {
     log(event.type, { ...event, at: undefined });
     if (event.type === 'drift') {
+      if (onBreak()) return; // breaks are allowed to wander
       const quest = store.activeQuest();
       const last = recent.at(-1);
       lastNudgeContext = { at: now(), match: event.match || null, key: last ? siteKey(last) || last.app : null, questId: quest?.id || null };
@@ -162,6 +164,37 @@ export function createCompanion({ store, watcher, makeBrain, ui, judge = null, c
       parked: entries.filter((e) => e.type === 'parked').length,
     };
   }
+
+  // --- focus sessions (timer ring) -------------------------------------------
+  // A visible countdown against time blindness. Focus ends in a short break
+  // (no drift nudges during it), then a call back to the next step.
+  const sessionNow = () => store.get().session || null;
+  function setSession(session) { store.update((st) => ({ ...st, session })); ui.status?.({ label: lastLabel, session }); }
+  async function startSession({ minutes = 25 } = {}) {
+    const m = Math.max(5, Math.min(120, Math.round(Number(minutes) || 25)));
+    const at = now();
+    const session = { kind: 'focus', minutes: m, startAt: at, endAt: at + m * 60_000, questId: store.activeQuest()?.id || null };
+    setSession(session);
+    log('session-start', { minutes: m });
+    await speak('session-start', { type: 'session-start', minutes: m });
+    return session;
+  }
+  function stopSession() { const s = sessionNow(); setSession(null); log('session-stop', {}); return { stopped: !!s }; }
+  async function checkSession(at, label) {
+    const s = sessionNow();
+    if (!s || at < s.endAt) return;
+    if (s.kind === 'focus') {
+      log('session-done', { minutes: s.minutes });
+      ui.gameEvents?.([{ type: 'session-done', minutes: s.minutes }]);
+      setSession({ kind: 'break', minutes: T.breakMinutes, startAt: at, endAt: at + T.breakMinutes * 60_000, questId: s.questId });
+      await speak('session-end', { type: 'session-end', minutes: s.minutes, breakMinutes: T.breakMinutes });
+    } else {
+      setSession(null);
+      log('break-done', {});
+      if (label !== 'away') await speak('break-end', { type: 'break-end' });
+    }
+  }
+  const onBreak = () => sessionNow()?.kind === 'break';
 
   // --- vault ("park it"): a distraction is saved for later, not blocked ------
   // Parking is an explicit user action, so the parked item may keep its page
@@ -278,6 +311,7 @@ export function createCompanion({ store, watcher, makeBrain, ui, judge = null, c
         await speak('stuck', { type: 'stuck', onTaskSeconds });
       }
       lastTickAt = at;
+      await checkSession(at, c.label);
       await bookends(at, c.label);
     } catch (e) {
       log('tick-error', { error: String(e.message || e).slice(0, 200) });
@@ -303,6 +337,8 @@ export function createCompanion({ store, watcher, makeBrain, ui, judge = null, c
     tick,
     noteChat,
     park,
+    startSession,
+    stopSession,
     vault: () => store.get().vault || [],
     unpark(id) {
       const before = (store.get().vault || []).length;
@@ -364,7 +400,7 @@ export function createCompanion({ store, watcher, makeBrain, ui, judge = null, c
     status() {
       const st = store.get();
       const quest = store.activeQuest();
-      return { paused: st.paused, pausedUntil: st.pausedUntil || null, label: lastLabel, quest: quest && { title: quest.title, next: nextStep(quest)?.text || null, boss: quest.boss ? bossHp(quest) : null }, level: levelProgress(st.game.xp.total), skills: st.game.xp.skills, titles: st.game.titles, streak: st.game.streak, nudges: st.nudges, nudgeAfterSeconds: driftAfter(), judge: judge?.mode || 'off', today: dayActivity() };
+      return { session: st.session || null, paused: st.paused, pausedUntil: st.pausedUntil || null, label: lastLabel, quest: quest && { title: quest.title, next: nextStep(quest)?.text || null, boss: quest.boss ? bossHp(quest) : null }, level: levelProgress(st.game.xp.total), skills: st.game.xp.skills, titles: st.game.titles, streak: st.game.streak, nudges: st.nudges, nudgeAfterSeconds: driftAfter(), judge: judge?.mode || 'off', today: dayActivity() };
     },
   };
 }

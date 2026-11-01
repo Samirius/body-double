@@ -75,6 +75,7 @@ async function act(name, payload = {}) {
     case 'done': return client.call('POST', '/steps/done');
     case 'wrong': return client.call('POST', '/feedback', { verdict: 'wrong-nudge' });
     case 'park': return client.call('POST', '/vault/park', {});
+    case 'session': return client.call('POST', '/session', { action: payload.action === 'stop' ? 'stop' : 'start', minutes: Number(payload.minutes) || 25 });
     case 'vault': return client.call('GET', '/vault');
     case 'unpark': return client.call('POST', '/vault/remove', { id: String(payload.id || '') });
     case 'missed': return client.call('POST', '/feedback', { verdict: 'missed-drift' });
@@ -130,6 +131,16 @@ async function selftest() {
     step('snoozed', { paused: afterSnooze.paused, pausedUntil: afterSnooze.pausedUntil != null });
     if (!afterSnooze.paused) throw new Error('snooze button did not pause the service');
     await shot(pet, '3-pet-sleep');
+    // Start a focus session through the pet's own quick menu.
+    await client.call('POST', '/pause', { paused: false });
+    await pet.webContents.executeJavaScript("(() => { const m = document.getElementById('menu'); m.style.display = 'flex'; m.querySelector('button[data-min=\"25\"]').click(); })()");
+    await wait(1800);
+    const afterSession = await client.call('GET', '/status');
+    step('session', afterSession.session && { kind: afterSession.session.kind, minutes: afterSession.session.minutes });
+    if (afterSession.session?.kind !== 'focus') throw new Error('menu did not start a focus session');
+    await pet.webContents.executeJavaScript("document.querySelector('#bubble').style.display = 'none'; 0");
+    await wait(600);
+    await shot(pet, '6-pet-ring');
     panel.show(); panel.webContents.send('bd:refresh');
     await wait(1500);
     await shot(panel, '4-panel');

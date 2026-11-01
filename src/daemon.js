@@ -71,6 +71,7 @@ const routes = {
   'POST /rules/forget': (b) => companion.forgetRule(b.keyword),
   'GET /report': () => ({ report: killTestReport(store.get().log) }),
   'GET /today': () => companion.dayActivity(),
+  'POST /session': (b) => (b.action === 'stop' ? companion.stopSession() : companion.startSession({ minutes: b.minutes })),
   'POST /vault/park': (b) => companion.park({ note: b.note }),
   'GET /vault': () => companion.vault(),
   'POST /vault/remove': (b) => companion.unpark(String(b.id || '')),
