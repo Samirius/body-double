@@ -23,6 +23,7 @@ export function emptyState() {
     paused: false,
     settings: {}, // learned tuning, e.g. driftAfterSeconds
     bookends: {}, // last day the morning/evening messages were sent
+    vault: [], // parked distractions/ideas (explicit user action)
     log: [],
   };
 }

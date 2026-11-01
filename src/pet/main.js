@@ -16,7 +16,7 @@ import { buildFrame, frameToBitmap } from './sprites.js';
 const here = path.dirname(fileURLToPath(import.meta.url));
 const selftestIdx = process.argv.indexOf('--selftest');
 const SELFTEST_DIR = selftestIdx > 0 ? path.resolve(process.argv[selftestIdx + 1] || 'selftest-out') : null;
-const STRIP_HEIGHT = 260;
+const STRIP_HEIGHT = 330; // room for the transmission bubble above the pet
 
 if (!SELFTEST_DIR && !app.requestSingleInstanceLock()) app.quit();
 
@@ -74,6 +74,9 @@ async function act(name, payload = {}) {
     case 'quests': return client.call('GET', '/quests');
     case 'done': return client.call('POST', '/steps/done');
     case 'wrong': return client.call('POST', '/feedback', { verdict: 'wrong-nudge' });
+    case 'park': return client.call('POST', '/vault/park', {});
+    case 'vault': return client.call('GET', '/vault');
+    case 'unpark': return client.call('POST', '/vault/remove', { id: String(payload.id || '') });
     case 'missed': return client.call('POST', '/feedback', { verdict: 'missed-drift' });
     case 'snooze': return client.call('POST', '/pause', { paused: true, minutes: payload.minutes || 10 });
     case 'pause-toggle': { const s = await client.call('GET', '/status'); return client.call('POST', '/pause', { paused: !s.paused }); }

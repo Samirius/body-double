@@ -21,12 +21,12 @@ function daysLeft(deadline) {
 }
 
 async function refresh() {
-  const [s, q] = await Promise.all([window.bd.act('status'), window.bd.act('quests')]);
+  const [s, q, v] = await Promise.all([window.bd.act('status'), window.bd.act('quests'), window.bd.act('vault')]);
   if (!s.ok) { $('err').textContent = s.error; return; }
   $('err').textContent = '';
   const st = s.data;
   drawAvatar(petStage(st.level.level));
-  $('level').textContent = `Level ${st.level.level}`;
+  $('level').textContent = `LV ${String(st.level.level).padStart(2, '0')}`;
   $('xpbar').style.width = `${Math.round(st.level.fraction * 100)}%`;
   $('xptext').textContent = `${st.level.into} / ${st.level.needed} XP to level ${st.level.level + 1}`;
   const label = st.paused ? 'paused' : st.label || 'watching';
@@ -49,7 +49,7 @@ async function refresh() {
     $('hptext').textContent = quest.boss.hp ? `Boss HP ${quest.boss.hp}/${quest.boss.max}` : 'Boss defeated';
   } else $('boss').style.display = 'none';
 
-  $('streak').innerHTML = `🔥 <b>${st.streak.days}</b> day${st.streak.days === 1 ? '' : 's'} · 🛡 ${st.streak.shields} shield${st.streak.shields === 1 ? '' : 's'}`;
+  $('streak').innerHTML = `STREAK <b>${String(st.streak.days).padStart(2, '0')}D</b> · SHIELD ×${st.streak.shields}`;
   const skills = Object.entries(st.skills).sort((a, b) => b[1] - a[1]);
   $('skills').innerHTML = skills.length ? '' : 'Finish a step to start levelling skills.';
   for (const [name, xp] of skills) {
@@ -66,6 +66,18 @@ async function refresh() {
   $('n-back').textContent = st.nudges.returned;
   $('n-med').textContent = fmtSecs(median(st.nudges.returnSeconds));
 
+  $('vault').innerHTML = '';
+  const items = v.ok ? v.data.slice(0, 8) : [];
+  if (!items.length) $('vault').innerHTML = '<span class="muted">Nothing parked. Hit PARK IT on a nudge to save a rabbit hole for later.</span>';
+  for (const item of items) {
+    const row = document.createElement('div');
+    row.className = 'vault-row';
+    row.innerHTML = '<span></span><small></small><button title="Done with it">✓</button>';
+    row.children[0].textContent = item.note || item.title || item.key;
+    row.children[1].textContent = new Date(item.at).toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+    row.children[2].onclick = async () => { await window.bd.act('unpark', { id: item.id }); refresh(); };
+    $('vault').appendChild(row);
+  }
   $('quests').innerHTML = '';
   for (const x of (q.ok ? q.data : [])) {
     const row = document.createElement('div');

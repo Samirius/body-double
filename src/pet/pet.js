@@ -1,10 +1,10 @@
 // Pet renderer: draws the familiar, wanders along the strip, reacts to the
-// companion's live events, and shows nudges in a speech bubble.
-import { buildFrame, SIZE } from './sprites.js';
+// companion's live events, and shows nudges as an incoming transmission.
+import { buildFrame, SIZE, STAGE_GLOW } from './sprites.js';
 import { petStage } from '../core/game.js';
 import { decidePose, createWanderer } from './behaviour.js';
 
-const SCALE = 4, SPR = SIZE * SCALE, GROUND = 6;
+const SCALE = 4, SPR = SIZE * SCALE, GROUND = 6, BUBBLE_W = 340;
 const canvas = document.getElementById('stage');
 const ctx = canvas.getContext('2d');
 const bubble = document.getElementById('bubble');
@@ -26,6 +26,12 @@ function draw(frame, x, y) {
   }
 }
 
+// The glow follows the familiar's stage, and turns red while you drift.
+function applyGlow() {
+  const glow = state.label === 'drift' ? '#ff3b5c' : STAGE_GLOW[state.stage] || STAGE_GLOW[1];
+  canvas.style.setProperty('--glow', glow);
+}
+
 let last = performance.now();
 function loop(now) {
   const t = now / 1000, dt = Math.min(0.1, (now - last) / 1000);
@@ -41,40 +47,64 @@ function loop(now) {
 }
 requestAnimationFrame(loop);
 
-// --- speech bubble -------------------------------------------------------
+// --- transmission bubble ---------------------------------------------------
+const KIND = {
+  drift: { title: 'INCOMING // FAMILIAR', accent: '#ff2bd6' },
+  chat: { title: 'SIGNAL // OFF-QUEST CHAT', accent: '#ff2bd6' },
+  stuck: { title: 'ASSIST // STEP TOO BIG?', accent: '#f5ff3b' },
+  morning: { title: 'BOOT // TODAY’S RUN', accent: '#00f0ff' },
+  evening: { title: 'LOG // RUN COMPLETE', accent: '#39ff9a' },
+};
 function placeBubble() {
-  const w = 320;
-  const left = Math.max(8, Math.min(innerWidth - w - 8, wander.x() + SPR / 2 - 60));
+  const left = Math.max(8, Math.min(innerWidth - BUBBLE_W - 8, wander.x() + SPR / 2 - 70));
   bubble.style.left = `${left}px`;
   bubble.style.bottom = `${SPR + GROUND + 18}px`;
-  bubble.style.setProperty('--tail', `${Math.max(16, Math.min(w - 30, wander.x() + SPR / 2 - left - 9))}px`);
+  bubble.style.setProperty('--tail', `${Math.max(18, Math.min(BUBBLE_W - 32, wander.x() + SPR / 2 - left - 7))}px`);
+}
+let typing = null;
+function typeOut(el, text) {
+  clearInterval(typing);
+  el.textContent = '';
+  let i = 0;
+  typing = setInterval(() => { el.textContent = text.slice(0, ++i); if (i >= text.length) clearInterval(typing); }, 14);
 }
 function showBubble({ message, nextAction, kind = 'drift' }) {
-  $('msg').textContent = message || '';
+  const k = KIND[kind] || KIND.drift;
+  bubble.style.setProperty('--accent', k.accent);
+  $('b-title').textContent = k.title;
+  typeOut($('msg'), message || '');
   $('next').textContent = nextAction || '';
-  // Only drift nudges can be "wrong"; day summaries and stuck offers get OK.
+  // Drift-type nudges can be parked or marked wrong; summaries and offers get OK.
   const drift = kind === 'drift' || kind === 'chat';
   $('b-wrong').style.display = drift ? '' : 'none';
+  $('b-park').style.display = drift ? '' : 'none';
   $('b-snooze').style.display = kind === 'evening' ? 'none' : '';
   $('b-ok').style.display = drift ? 'none' : '';
+  bubble.style.display = 'none';
+  void bubble.offsetWidth; // restart the boot animation
   bubble.style.display = 'block';
   state.bubbleUntil = performance.now() + 90_000;
   placeBubble();
 }
-function hideBubble() { bubble.style.display = 'none'; state.bubbleUntil = 0; }
+function hideBubble() { bubble.style.display = 'none'; state.bubbleUntil = 0; clearInterval(typing); }
 
 async function act(name, payload) {
   const r = await window.bd.act(name, payload);
-  if (!r.ok) floater(r.error, 'good');
+  if (!r.ok) floater(r.error, 'warn');
   return r;
 }
-$('b-done').onclick = async () => { hideBubble(); const r = await act('done'); if (r.ok && !r.data.events.length) floater('No open step', 'good'); };
+$('b-done').onclick = async () => { hideBubble(); const r = await act('done'); if (r.ok && !r.data.events.length) floater('NO OPEN STEP', 'warn'); };
 $('b-ok').onclick = () => hideBubble();
-$('b-snooze').onclick = async () => { hideBubble(); await act('snooze', { minutes: 10 }); floater('Snoozed 10 min', 'good'); };
+$('b-snooze').onclick = async () => { hideBubble(); await act('snooze', { minutes: 10 }); floater('SNOOZE // 10 MIN', 'good'); };
+$('b-park').onclick = async () => {
+  hideBubble();
+  const r = await act('park');
+  if (r.ok) floater('PARKED // IN VAULT', 'warn');
+};
 $('b-wrong').onclick = async () => {
   hideBubble();
   const r = await act('wrong');
-  if (r.ok) floater(r.data.learned ? `Got it: "${r.data.keyword}" is fine here` : 'Noted', 'good');
+  if (r.ok) floater(r.data.learned ? `LEARNED // "${r.data.keyword}" OK HERE` : 'NOTED', 'good');
 };
 
 // --- floating text ---------------------------------------------------------
@@ -88,11 +118,11 @@ function floater(text, kind = '') {
   const el = document.createElement('div');
   el.className = `floater ${kind}`;
   el.textContent = text;
-  el.style.left = `${Math.max(8, Math.min(innerWidth - 260, wander.x() + SPR / 2 - 40))}px`;
-  el.style.bottom = `${SPR + GROUND + 10 + slot * 30}px`;
+  el.style.left = `${Math.max(8, Math.min(innerWidth - 320, wander.x() + SPR / 2 - 50))}px`;
+  el.style.bottom = `${SPR + GROUND + 12 + slot * 34}px`;
   el.style.animationDelay = `${slot * 120}ms`;
   document.body.appendChild(el);
-  setTimeout(() => el.remove(), 2300);
+  setTimeout(() => el.remove(), 2700);
 }
 
 // --- click-through: interactive only over the pet or the bubble -------------
@@ -117,26 +147,28 @@ async function refreshStatus() {
   state.paused = r.data.paused;
   if (r.data.label) state.label = r.data.label;
   state.stage = petStage(r.data.level.level);
+  applyGlow();
 }
 
 window.bd.onConnection((s) => { state.connected = s === 'connected'; $('offline').style.display = state.connected ? 'none' : 'block'; if (state.connected) refreshStatus(); });
 window.bd.onEvent((ev) => {
-  if (ev.type === 'hello') { state.paused = ev.status.paused; state.label = ev.status.label; state.stage = petStage(ev.status.level.level); return; }
-  if (ev.type === 'status') { if (ev.label) state.label = ev.label; if (typeof ev.paused === 'boolean') state.paused = ev.paused; return; }
+  if (ev.type === 'hello') { state.paused = ev.status.paused; state.label = ev.status.label; state.stage = petStage(ev.status.level.level); applyGlow(); return; }
+  if (ev.type === 'status') { if (ev.label) state.label = ev.label; if (typeof ev.paused === 'boolean') state.paused = ev.paused; applyGlow(); return; }
   if (ev.type === 'nudge') { showBubble(ev); return; }
   if (ev.type !== 'game' || !ev.game) return;
   const g = ev.game;
   const cheer = (ms) => { state.cheerUntil = Math.max(state.cheerUntil, performance.now() + ms); };
   switch (g.type) {
-    case 'xp': floater(`+${g.amount} XP · ${g.skill}`); cheer(1800); break;
-    case 'comeback-bonus': floater('Comeback bonus ×1.5', 'good'); break;
-    case 'level-up': floater(`LEVEL ${g.level}!`, 'big'); cheer(3000); break;
-    case 'skill-up': floater(`${g.skill} → level ${g.level}`, 'good'); break;
-    case 'title': floater(`New title: ${g.name}`, 'big'); cheer(2500); break;
-    case 'boss-defeated': floater('BOSS DEFEATED!', 'big'); cheer(4000); break;
-    case 'pet-evolved': state.stage = g.stage; floater('Your familiar evolved!', 'big'); cheer(4000); break;
-    case 'shield-used': floater('Streak shield used', 'good'); break;
-    case 'returned': floater('Welcome back', 'good'); cheer(1500); hideBubble(); break;
+    case 'xp': floater(`+${g.amount} XP // ${String(g.skill).toUpperCase()}`); cheer(1800); break;
+    case 'comeback-bonus': floater('COMEBACK ×1.5', 'good'); break;
+    case 'level-up': floater(`LEVEL UP // ${String(g.level).padStart(2, '0')}`, 'big'); cheer(3000); break;
+    case 'skill-up': floater(`${String(g.skill).toUpperCase()} → LV ${g.level}`, 'good'); break;
+    case 'title': floater(`TITLE UNLOCKED // ${String(g.name).toUpperCase()}`, 'big'); cheer(2500); break;
+    case 'boss-defeated': floater('BOSS DOWN', 'big'); cheer(4000); break;
+    case 'pet-evolved': state.stage = g.stage; floater('FAMILIAR EVOLVED', 'big'); cheer(4000); break;
+    case 'shield-used': floater('STREAK SHIELD USED', 'good'); break;
+    case 'returned': floater('BACK ON QUEST', 'good'); cheer(1500); hideBubble(); break;
+    case 'parked': break; // the Park button already confirmed it
     default: break;
   }
   refreshStatus();

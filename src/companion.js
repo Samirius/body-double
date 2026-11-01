@@ -159,7 +159,28 @@ export function createCompanion({ store, watcher, makeBrain, ui, judge = null, c
       returns: returns.length,
       medianReturnSeconds: median(returns),
       bossesDefeated: steps.filter((e) => (e.events || []).includes('boss-defeated')).length,
+      parked: entries.filter((e) => e.type === 'parked').length,
     };
+  }
+
+  // --- vault ("park it"): a distraction is saved for later, not blocked ------
+  // Parking is an explicit user action, so the parked item may keep its page
+  // title or note (unlike passive watching, which never stores titles).
+  function park({ note = '' } = {}) {
+    const last = [...recent].reverse().find((r) => !r.neutral);
+    const fromWindow = !note && last;
+    const item = {
+      id: newId('v'), at: now(),
+      key: fromWindow ? siteKey(last) || last.app : null,
+      title: fromWindow ? String(last.title || '').replace(/\s*[-—|]\s*(brave|google chrome|chrome|microsoft edge|firefox|opera)\s*$/i, '').slice(0, 120) : null,
+      note: String(note || '').slice(0, 300) || null,
+      quest: store.activeQuest()?.title || null,
+    };
+    if (!item.title && !item.note) throw new Error('nothing to park: no recent window and no note');
+    store.update((st) => ({ ...st, vault: [item, ...(st.vault || [])].slice(0, 200) }));
+    log('parked', { key: item.key });
+    ui.gameEvents?.([{ type: 'parked', label: item.note || item.key || item.title }]);
+    return item;
   }
 
   function morningSummary() {
@@ -176,6 +197,7 @@ export function createCompanion({ store, watcher, makeBrain, ui, judge = null, c
     if (a.driftNudges) bits.push(`${a.returns}/${a.driftNudges} drifts turned around${a.medianReturnSeconds != null ? ` (back in ~${Math.max(1, Math.round(a.medianReturnSeconds / 60))} min)` : ''}`);
     if (a.titles.length) bits.push(`new title: ${a.titles.map((t) => titleName[t] || t).join(', ')}`);
     if (a.bossesDefeated) bits.push(`${a.bossesDefeated} boss${a.bossesDefeated === 1 ? '' : 'es'} defeated`);
+    if (a.parked) bits.push(`${a.parked} thing${a.parked === 1 ? '' : 's'} parked for later (in your vault)`);
     return `Today: ${bits.filter(Boolean).join(' · ')}. Streak ${store.get().game.streak.days} day${store.get().game.streak.days === 1 ? '' : 's'}.`;
   }
 
@@ -280,6 +302,14 @@ export function createCompanion({ store, watcher, makeBrain, ui, judge = null, c
   return {
     tick,
     noteChat,
+    park,
+    vault: () => store.get().vault || [],
+    unpark(id) {
+      const before = (store.get().vault || []).length;
+      store.update((st) => ({ ...st, vault: (st.vault || []).filter((v) => v.id !== id) }));
+      log('unparked', {});
+      return { removed: before - (store.get().vault || []).length };
+    },
     start() { if (!timer) { timer = setInterval(tick, sampleEverySeconds * 1000); tick(); } },
     stop() { clearInterval(timer); timer = null; watcher.stop?.(); },
     learnFromFeedback,

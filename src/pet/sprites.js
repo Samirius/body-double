@@ -7,12 +7,15 @@
 export const SIZE = 24;
 
 const BASE = { o: '#1e1b2e', w: '#f8fafc', k: '#111827', m: '#7f1d1d', p: '#fb7185', y: '#facc15', z: '#818cf8', g: '#fef3c7' };
+// Neon palettes (cyberpunk HUD): bright body, hot highlight, deep shade.
 export const STAGE_COLORS = {
-  1: { b: '#6ee7b7', l: '#a7f3d0', d: '#10b981' },
-  2: { b: '#7dd3fc', l: '#bae6fd', d: '#0ea5e9' },
-  3: { b: '#c4b5fd', l: '#e9d5ff', d: '#8b5cf6' },
-  4: { b: '#fcd34d', l: '#fef08a', d: '#f59e0b' },
+  1: { b: '#39ffb0', l: '#b8ffe4', d: '#00b37a' },
+  2: { b: '#22e4ff', l: '#b5f7ff', d: '#0088c7' },
+  3: { b: '#c45bff', l: '#ecc4ff', d: '#7a1fd1' },
+  4: { b: '#ffd23a', l: '#fff3b0', d: '#e08a00' },
 };
+// Glow around the pet per stage (the renderer turns it red while you drift).
+export const STAGE_GLOW = { 1: '#39ffb0', 2: '#22e4ff', 3: '#ff2bd6', 4: '#ffd23a' };
 export const paletteFor = (stage) => ({ ...BASE, ...(STAGE_COLORS[stage] || STAGE_COLORS[1]) });
 
 function grid() { return Array.from({ length: SIZE }, () => Array(SIZE).fill('')); }
