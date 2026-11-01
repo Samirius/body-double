@@ -70,6 +70,8 @@ export const newId = (prefix) => `${prefix}-${Date.now().toString(36)}-${(seq++)
 
 // A quest is a goal with small steps; `boss: true` gives it an HP bar and a
 // kill bonus (deadlines). allow/deny are keywords for the classifier.
-export function makeQuest({ title, tag = 'General', steps = [], allow = [], deny = [], deadline = null, boss = !!deadline }) {
-  return { id: newId('q'), title, tag, allow, deny, deadline, boss, steps: steps.map((text) => ({ id: newId('s'), text, done: false })) };
+// repo: a git working folder for coding quests (the scope guard watches it for
+// a growing pile of uncommitted changes).
+export function makeQuest({ title, tag = 'General', steps = [], allow = [], deny = [], deadline = null, boss = !!deadline, repo = null }) {
+  return { id: newId('q'), title, tag, allow, deny, deadline, boss, repo: repo || null, steps: steps.map((text) => ({ id: newId('s'), text, done: false })) };
 }

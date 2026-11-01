@@ -12,6 +12,10 @@ export const DEFAULT_RULES = {
   communication: ['whatsapp', 'telegram', 'discord', 'slack', 'signal', 'messenger'],
   // Apps that are neutral plumbing (switching windows, the companion itself).
   neutralApps: ['explorer', 'searchhost', 'shellexperiencehost', 'lockapp', 'body-double', 'electron', 'startmenuexperiencehost', 'applicationframehost'],
+  // Calls, meetings, presenting and screen sharing: the companion goes quiet
+  // (no nudges, sounds or full-screen effects) so it never embarrasses you.
+  meetingApps: ['zoom', 'teams', 'ms-teams', 'webex', 'ciscowebex', 'skype', 'gotomeeting', 'obs64', 'obs'],
+  meetingTitles: ['zoom meeting', 'meet - ', 'google meet', 'microsoft teams meeting', '| microsoft teams', 'huddle', 'webex', 'you are screen sharing', 'is presenting', 'you are presenting', 'screen sharing', 'powerpoint slide show', 'slide show', 'presenter view'],
 };
 
 export const BROWSERS = ['brave', 'chrome', 'msedge', 'firefox', 'opera', 'vivaldi', 'arc', 'browser'];
@@ -24,8 +28,10 @@ export function classify(sample, quest, rules = DEFAULT_RULES) {
   if (!sample) return { label: 'unclear', reason: 'no sample', match: null };
   if (sample.idleSeconds >= rules.awayAfterSeconds) return { label: 'away', reason: `idle ${sample.idleSeconds}s`, match: null };
   const app = norm(sample.app);
-  if (rules.neutralApps.includes(app)) return { label: 'unclear', reason: `neutral app ${app}`, match: null, neutral: true };
   const hay = `${app} ${norm(sample.title)}`;
+  const meeting = (rules.meetingApps || []).includes(app) ? app : firstMatch(hay, rules.meetingTitles);
+  if (meeting) return { label: 'unclear', reason: `meeting (${meeting.trim()})`, match: null, neutral: true, quiet: true };
+  if (rules.neutralApps.includes(app)) return { label: 'unclear', reason: `neutral app ${app}`, match: null, neutral: true };
   // Quest-specific lists win over global ones, so "youtube" can be on-task
   // for a quest like "edit the course video".
   const allow = firstMatch(hay, quest?.allow);

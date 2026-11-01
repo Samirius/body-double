@@ -23,6 +23,11 @@ public static class Fg {
   [DllImport("user32.dll")] public static extern uint GetWindowThreadProcessId(IntPtr h, out uint pid);
   [StructLayout(LayoutKind.Sequential)] public struct LII { public uint cbSize; public uint dwTime; }
   [DllImport("user32.dll")] public static extern bool GetLastInputInfo(ref LII p);
+  [StructLayout(LayoutKind.Sequential)] public struct RECT { public int L; public int T; public int R; public int B; }
+  [StructLayout(LayoutKind.Sequential)] public struct MI { public int cbSize; public RECT rcMonitor; public RECT rcWork; public uint dwFlags; }
+  [DllImport("user32.dll")] public static extern bool GetWindowRect(IntPtr h, out RECT r);
+  [DllImport("user32.dll")] public static extern IntPtr MonitorFromWindow(IntPtr h, uint f);
+  [DllImport("user32.dll")] public static extern bool GetMonitorInfo(IntPtr m, ref MI i);
 }
 "@
 [Console]::OutputEncoding = [Text.Encoding]::UTF8
@@ -36,7 +41,11 @@ while ($true) {
   $name = ''; try { $name = (Get-Process -Id $procId).ProcessName } catch {}
   $lii = New-Object Fg+LII; $lii.cbSize = 8; [void][Fg]::GetLastInputInfo([ref]$lii)
   $idleMs = [Environment]::TickCount - [int]$lii.dwTime
-  @{ title = $sb.ToString(); app = $name; idleMs = $idleMs } | ConvertTo-Json -Compress
+  # Fullscreen = the window covers its whole monitor (videos, games, slide shows).
+  $r = New-Object Fg+RECT; [void][Fg]::GetWindowRect($h, [ref]$r)
+  $mi = New-Object Fg+MI; $mi.cbSize = [Runtime.InteropServices.Marshal]::SizeOf([type][Fg+MI]); [void][Fg]::GetMonitorInfo([Fg]::MonitorFromWindow($h, 2), [ref]$mi)
+  $full = ($r.L -le $mi.rcMonitor.L -and $r.T -le $mi.rcMonitor.T -and $r.R -ge $mi.rcMonitor.R -and $r.B -ge $mi.rcMonitor.B)
+  @{ title = $sb.ToString(); app = $name; idleMs = $idleMs; full = $full } | ConvertTo-Json -Compress
 }
 `;
 
@@ -50,7 +59,9 @@ function defaultSpawnHelper() {
 
 export function normalizeSample(s, at = Date.now()) {
   if (!s || typeof s !== 'object') return null;
-  return { title: String(s.title || ''), app: String(s.app || '').toLowerCase(), idleSeconds: Math.max(0, Math.round((Number(s.idleMs) || 0) / 1000)), at };
+  // The desktop itself (explorer) spans the monitor too; that is not "fullscreen".
+  const app = String(s.app || '').toLowerCase();
+  return { title: String(s.title || ''), app, idleSeconds: Math.max(0, Math.round((Number(s.idleMs) || 0) / 1000)), fullscreen: s.full === true && app !== 'explorer', at };
 }
 
 export function createWatcher({ spawnHelper = defaultSpawnHelper, sampleTimeoutMs = 5000, onRestart = () => {} } = {}) {

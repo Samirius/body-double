@@ -93,6 +93,11 @@ export function templateNudge({ quest, nextStep, event }) {
     case 'session-start': return { message: `${event.minutes}:00 on the clock${quest ? ` for ${what}` : ''}. I'll keep watch.`, nextAction: step ? `First, just: ${step}` : 'First, just open what you need' };
     case 'session-end': return { message: `${event.minutes} minutes done. That counts.`, nextAction: `Stand up and drink water (${event.breakMinutes} min break)` };
     case 'break-end': return { message: 'Break over. Back in?', nextAction: step || 'Pick the next tiny step' };
+    case 'hyperfocus': return { message: `${event.minutes} minutes straight. Your brain needs a refill.`, nextAction: 'Stand up, drink water, look out a window for 2 min' };
+    case 'side-task': return { message: `Side task? This looks like "${event.where}", not ${what}.`, nextAction: step ? `Park it and go back to: ${step}` : `Park it and go back to ${what}` };
+    case 'scope': return event.reason === 'uncommitted'
+      ? { message: `${event.files} files changed${event.minutes ? `, no commit for ${event.minutes} min` : ''}. The scope is growing.`, nextAction: 'Commit what works now, then park the rest' }
+      : { message: `That's new scope, not ${what}.`, nextAction: 'Finish and commit this first, then park the new idea' };
     case 'plan': return { message: `Quest set: ${what}. I'll keep you on it.`, nextAction: step ? `First, just: ${step}` : 'Name the very first tiny step (under 2 min)' };
     case 'chat': return { message: `This chat is not about ${what}. Park the idea and come back?`, nextAction: step ? `Save the idea in one line, then: ${step}` : 'Save the idea in one line, then return to your quest' };
     default:
@@ -112,6 +117,9 @@ export function buildPrompt({ quest, nextStep, event, stats, now = new Date() })
     stuck: () => `on task for ${mins(event.onTaskSeconds)} min without finishing the step (possibly stuck)`,
     morning: () => `start of the day. ${event.summary || ''}`,
     evening: () => `end of the day. ${event.summary || ''}`,
+    hyperfocus: () => `${event.minutes} minutes at the screen without a real break (hyperfocus); a kind, short push to stand up and drink water`,
+    'side-task': () => `they are on the right site/app but a different job ("${event.where}") for a few minutes; ask if it's a side task and suggest parking it`,
+    scope: () => (event.reason === 'uncommitted' ? `their repo has ${event.files} changed files (${event.lines} lines) and no commit for ${event.minutes ?? 'a long'} min: the work is sprawling; suggest committing what works and parking the rest` : `they asked their AI agent for something outside the quest ("${String(event.request || '').slice(0, 120)}"): scope creep; suggest finishing and committing first, then parking the new idea`),
     plan: () => 'they just named this quest. If it has no steps or the next one is bigger than ~10 minutes, call split_step with 2-5 tiny concrete steps (the first under 2 minutes), then nudge toward the first',
     chat: () => `they are chatting with an AI assistant about something unrelated to the quest (${event.reason || 'off-topic'}); suggest parking the idea in one line`,
   }[event.type]?.() || event.type;

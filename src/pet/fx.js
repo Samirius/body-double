@@ -82,16 +82,18 @@ const EFFECTS = {
       bigText(text, sub, t, { color: '#ff3b5c', glitch: true });
     };
   },
-  confetti({ text, sub }) {
-    const bits = Array.from({ length: 220 }, (_, i) => ({ x: rnd(0, innerWidth), y: rnd(-innerHeight, 0), v: rnd(250, 600), w: rnd(-3, 3), s: rnd(6, 12), c: ['#00f0ff', '#ff2bd6', '#39ff9a', '#ffe23b'][i % 4] }));
+  confetti({ text, sub }, colors = ['#00f0ff', '#ff2bd6', '#39ff9a', '#ffe23b'], color = '#39ff9a') {
+    const bits = Array.from({ length: 220 }, (_, i) => ({ x: rnd(0, innerWidth), y: rnd(-innerHeight, 0), v: rnd(250, 600), w: rnd(-3, 3), s: rnd(6, 12), c: colors[i % colors.length] }));
     return (t, dt) => {
       for (const b of bits) { b.y += b.v * dt; b.x += Math.sin(t * 8 + b.w) * 40 * dt; ctx.globalAlpha = Math.min(1, (1 - t) * 4); ctx.fillStyle = b.c; ctx.fillRect(b.x, b.y, b.s, b.s * 0.6); }
       ctx.globalAlpha = 1;
-      bigText(text, sub, t, { color: '#39ff9a' });
+      bigText(text, sub, t, { color });
     };
   },
+  // A perfect focus session: gold rain.
+  gold(fx) { return EFFECTS.confetti(fx, ['#ffe23b', '#ffc400', '#fff3a0', '#ffb000'], '#ffe23b'); },
 };
-const DURATION = { bomb: 3.2, rage: 2.6, confetti: 3 };
+const DURATION = { bomb: 3.2, rage: 2.6, confetti: 3, gold: 3 };
 
 window.bd.onFx((fx) => {
   const make = EFFECTS[fx.kind];

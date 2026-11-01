@@ -27,7 +27,15 @@ function fakeHelper(behaviour) {
 
 test('watcher: normal samples are normalised', async () => {
   const w = createWatcher({ spawnHelper: () => fakeHelper(() => ({ title: 'Doc', app: 'WINWORD', idleMs: 2600 })) });
-  assert.deepEqual({ ...(await w.sample()), at: 0 }, { title: 'Doc', app: 'winword', idleSeconds: 3, at: 0 });
+  assert.deepEqual({ ...(await w.sample()), at: 0 }, { title: 'Doc', app: 'winword', idleSeconds: 3, fullscreen: false, at: 0 });
+  w.stop();
+});
+
+test('watcher: fullscreen windows are flagged, except the desktop itself', async () => {
+  let n = 0;
+  const w = createWatcher({ spawnHelper: () => fakeHelper(() => (n++ === 0 ? { title: 'Slide Show', app: 'POWERPNT', idleMs: 0, full: true } : { title: '', app: 'explorer', idleMs: 0, full: true })) });
+  assert.equal((await w.sample()).fullscreen, true);
+  assert.equal((await w.sample()).fullscreen, false);
   w.stop();
 });
 

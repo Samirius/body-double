@@ -72,12 +72,26 @@ const routes = {
   'GET /quests': () => companion.listQuests(),
   'POST /quests': (b) => {
     if (!b.title) throw new Error('title is required');
-    const q = makeQuest({ title: b.title, steps: b.steps || [], tag: b.tag || 'General', allow: b.allow || [], deny: b.deny || [], deadline: b.deadline || null });
+    const q = makeQuest({ title: b.title, steps: b.steps || [], tag: b.tag || 'General', allow: b.allow || [], deny: b.deny || [], deadline: b.deadline || null, repo: b.repo || null });
     companion.addQuest(q, { activate: b.activate !== false });
     return { added: q.title, id: q.id, active: b.activate !== false };
   },
   // Answers at once; the plan arrives as a nudge event (a model may take a few seconds).
   'POST /quests/plan': () => { companion.planQuest().catch((e) => store.log('plan-error', { error: String(e.message || e).slice(0, 200) })); return { planning: true }; },
+  'POST /quests/edit': (b) => {
+    const q = findQuest(store.get().quests, b.query);
+    if (!q) throw new Error(`no quest matches "${b.query}"`);
+    return { quest: q.title, ...companion.editQuest(q.id, b.patch || {}) };
+  },
+  'POST /quests/remove': (b) => {
+    const q = findQuest(store.get().quests, b.query);
+    if (!q) throw new Error(`no quest matches "${b.query}"`);
+    return { quest: q.title, ...companion.removeQuest(q.id) };
+  },
+  // Scope guard: "is this new request part of the quest?" (agents call it), and
+  // "it's part of it" for the side task last pointed out.
+  'POST /scope/check': (b) => companion.scopeCheck(String(b.request || '')),
+  'POST /scope/allow': () => companion.allowScope(),
   'POST /quests/activate': (b) => {
     const q = findQuest(store.get().quests, b.query);
     if (!q) throw new Error(`no quest matches "${b.query}"`);

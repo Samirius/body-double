@@ -31,9 +31,18 @@ export function createFeelings({ now = Date.now } = {}) {
         'session-start': { emote: 'alert', voice: 'hm' },
         'session-end': { emote: 'sparkle', voice: 'celebrate' },
         'break-end': { emote: 'alert', voice: 'hm' },
+        hyperfocus: { emote: 'sweat', voice: 'sigh' },
+        scope: { emote: 'alert', voice: 'hm' },
+        'side-task': { emote: 'question', voice: 'hm' },
       }[kind] || null;
     },
-    returned() { calm(); return { emote: 'heart', voice: 'happy' }; },
+    // --- the good part: rewarded in the moment -------------------------------
+    // Flow combo: a soft chime when it starts and at every half hour (x6).
+    flow(level) { return level === 1 || level % 6 === 0 ? { emote: level >= 6 ? 'sparkle' : null, voice: 'chime' } : null; },
+    // A whole focus session without a single drift.
+    perfect(minutes) { calm(); return { emote: 'heart', voice: 'celebrate', fx: { kind: 'gold', text: 'PERFECT SESSION', sub: `${minutes} minutes, zero drift.` } }; },
+    // Back within a minute of a nudge: the comeback you can see.
+    returned(seconds = null) { calm(); return { emote: 'heart', voice: 'happy', quick: seconds != null && seconds <= 60 }; },
     done() { calm(); return { emote: 'sparkle', voice: 'happy' }; },
     park() { return { emote: 'sparkle', voice: 'ooh' }; },
     snooze() {

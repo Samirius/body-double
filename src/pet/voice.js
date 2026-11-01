@@ -52,6 +52,7 @@ export const SOUNDS = {
   whoa: () => tone({ f0: 380, f1: 1050, f2: 460, dur: 0.7, vibrato: 7 }),
   ooh: () => tone({ f0: 300, f1: 520, f2: 430, dur: 0.38 }),
   celebrate: () => [523, 659, 784, 1047, 1319].forEach((f, i) => tone({ type: 'square', f0: f, f1: f, dur: 0.09, at: i * 0.075, vol: 0.55 })),
+  chime: () => { tone({ f0: 1318, f1: 1318, dur: 0.35, vol: 0.5 }); tone({ f0: 1976, f1: 1976, dur: 0.5, at: 0.09, vol: 0.35 }); },
   boom: () => { noise({ dur: 0.9 }); tone({ type: 'sine', f0: 140, f1: 40, dur: 0.6, vol: 1 }); },
 };
 

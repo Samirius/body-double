@@ -145,7 +145,7 @@ async function act(name, payload = {}) {
 ipcMain.handle('bd:act', async (_e, name, payload) => {
   try { return { ok: true, data: await act(name, payload) }; } catch (e) { return { ok: false, error: String(e.message || e) }; }
 });
-const FX_KINDS = new Set(['bomb', 'rage', 'confetti']);
+const FX_KINDS = new Set(['bomb', 'rage', 'confetti', 'gold']);
 ipcMain.on('bd:fx', (_e, p) => {
   if (!fx || fx.isDestroyed() || !FX_KINDS.has(p?.kind)) return;
   // The strip and this window share the work area's x, so the bomb starts at the creature.

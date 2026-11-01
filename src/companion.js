@@ -11,6 +11,8 @@ import { classify, siteKey, DEFAULT_RULES } from './core/classifier.js';
 import { createDriftTracker } from './core/drift.js';
 import { completeStep, bossHp, levelProgress, dayKey, TITLES } from './core/game.js';
 import { newId } from './core/store.js';
+import { createRhythm } from './core/rhythm.js';
+import { gitScope, tooMuchUncommitted, pageKey, scopeHint } from './core/scope.js';
 
 export const DEFAULT_TIMING = {
   unclearMinutes: 6, // same unclear site/app this long -> ask the judge
@@ -44,6 +46,14 @@ export function createCompanion({ store, watcher, makeBrain, ui, judge = null, c
   let commRun = null; // { since, lastAt } continuous messaging time
   let onTaskMs = 0; // on-task time since the last finished step (for "stuck")
   let lastChatNudgeAt = 0; // chat-drift nudges at most every 30 min
+  // Rhythm: call quiet, flow combo, hyperfocus guard (see core/rhythm.js).
+  const rhythm = createRhythm(timing.rhythm);
+  let quiet = false, fullscreen = false;
+  // Scope guard (see core/scope.js): git pile-ups and same-site side tasks.
+  let gitCheckedAt = 0, lastScopeWarnAt = 0;
+  let sideRun = null; // { key, since } current page context of the active quest
+  const sideVerdicts = new Map(); // "<questId>|<page key>" -> 'in-scope' | 'side-task'
+  let lastSide = null; // { questId, key } the side task last pointed out (for "it's part of it")
 
   const nextStep = (q) => q?.steps.find((s) => !s.done) || null;
   const lower = (x) => String(x || '').trim().toLowerCase();
@@ -127,7 +137,10 @@ export function createCompanion({ store, watcher, makeBrain, ui, judge = null, c
 
   const brain = makeBrain({ onNudge: showNudge, onSplit: splitStep, log });
 
+  // Things the user asked for themselves still answer during a call; nothing else interrupts it.
+  const ASKED_FOR = new Set(['plan', 'session-start', 'session-end', 'scope']);
   async function speak(kind, event) {
+    if (quiet && !ASKED_FOR.has(kind)) { log('quiet-skip', { kind }); return; }
     const quest = store.activeQuest();
     currentNudgeKind = kind;
     try { await brain.handle({ quest, nextStep: nextStep(quest), event, stats: store.get().nudges }); } finally { currentNudgeKind = 'drift'; }
@@ -137,6 +150,8 @@ export function createCompanion({ store, watcher, makeBrain, ui, judge = null, c
     log(event.type, { ...event, at: undefined });
     if (event.type === 'drift') {
       if (onBreak()) return; // breaks are allowed to wander
+      const s = sessionNow();
+      if (s?.kind === 'focus') store.update((st) => ({ ...st, session: { ...s, drifts: (s.drifts || 0) + 1 } }));
       const quest = store.activeQuest();
       const last = recent.at(-1);
       lastNudgeContext = { at: now(), match: event.match || null, key: last ? siteKey(last) || last.app : null, questId: quest?.id || null };
@@ -192,8 +207,11 @@ export function createCompanion({ store, watcher, makeBrain, ui, judge = null, c
     const s = sessionNow();
     if (!s || at < s.endAt) return;
     if (s.kind === 'focus') {
-      log('session-done', { minutes: s.minutes });
-      ui.gameEvents?.([{ type: 'session-done', minutes: s.minutes }]);
+      // Perfect session: not one drift nudge while the ring ran.
+      const perfect = !s.drifts;
+      log('session-done', { minutes: s.minutes, perfect });
+      ui.gameEvents?.([{ type: 'session-done', minutes: s.minutes }, ...(perfect ? [{ type: 'perfect-session', minutes: s.minutes }] : [])]);
+      rhythm.rested();
       setSession({ kind: 'break', minutes: T.breakMinutes, startAt: at, endAt: at + T.breakMinutes * 60_000, questId: s.questId });
       await speak('session-end', { type: 'session-end', minutes: s.minutes, breakMinutes: T.breakMinutes });
     } else {
@@ -285,6 +303,89 @@ export function createCompanion({ store, watcher, makeBrain, ui, judge = null, c
     return label === 'unclear' ? c : { label, reason: `judged: ${r.reason || r.verdict}`, match: { list: 'judged', keyword: key } };
   }
 
+  // --- rhythm: call quiet, flow combo, hyperfocus ----------------------------
+  async function keepRhythm(sample, c, at, gapMs) {
+    const events = rhythm.push({ at, label: c.label, quiet: !!c.quiet, gapMs });
+    const q = rhythm.isQuiet(at), full = !!sample?.fullscreen;
+    if (q !== quiet || full !== fullscreen) {
+      if (q !== quiet) log(q ? 'quiet-start' : 'quiet-end', { reason: c.quiet ? c.reason : '' });
+      quiet = q; fullscreen = full;
+      ui.status?.({ label: lastLabel, quiet, fullscreen });
+    }
+    for (const e of events) {
+      if (e.type === 'flow') { log('flow', { level: e.level, minutes: e.minutes }); ui.gameEvents?.([e]); }
+      if (e.type === 'flow-banked') {
+        store.update((st) => {
+          const f = st.flow || { totalMinutes: 0, bestMinutes: 0, byDay: {} }, day = dayKey(at);
+          return { ...st, flow: { totalMinutes: f.totalMinutes + e.minutes, bestMinutes: Math.max(f.bestMinutes, e.minutes), byDay: { ...f.byDay, [day]: (f.byDay[day] || 0) + e.minutes } } };
+        });
+        log('flow-banked', { minutes: e.minutes });
+        ui.gameEvents?.([e]);
+      }
+      if (e.type === 'hyperfocus' && !onBreak()) { log('hyperfocus', { minutes: e.minutes }); await speak('hyperfocus', { type: 'hyperfocus', minutes: e.minutes }); }
+    }
+  }
+
+  // --- scope guard: drifting inside the work -----------------------------------
+  async function guardScope(sample, c, at, quest) {
+    if (!quest || quiet || onBreak()) { sideRun = null; return; }
+    // 1. A git pile-up for quests tied to a repo (checked every 5 min, warned at most every 30).
+    if (quest.repo && at - gitCheckedAt >= 5 * 60_000 && c.label !== 'away') {
+      gitCheckedAt = at;
+      const g = await gitScope(quest.repo, at);
+      if (tooMuchUncommitted(g) && at - lastScopeWarnAt >= 30 * 60_000) {
+        lastScopeWarnAt = at;
+        log('scope-uncommitted', { files: g.files, lines: g.lines, lastCommitMinutes: g.lastCommitMinutes });
+        await speak('scope', { type: 'scope', reason: 'uncommitted', files: g.files, lines: g.lines, minutes: g.lastCommitMinutes });
+      }
+    }
+    // 2. Same site, different job: 4+ minutes on a page context the decider says isn't this quest.
+    if (c.label !== 'on-task' || !judge || judge.mode === 'off') { sideRun = null; return; }
+    const key = pageKey(sample);
+    if (!key || (quest.scopeAllow || []).includes(key)) { sideRun = null; return; }
+    const vkey = `${quest.id}|${key}`;
+    if (sideVerdicts.has(vkey)) return;
+    if (!sideRun || sideRun.key !== key) { sideRun = { key, since: at }; return; }
+    if (at - sideRun.since < 4 * 60_000) return;
+    const r = await judge.judge({ quest, nextStep: nextStep(quest), sample, minutes: Math.round((at - sideRun.since) / 60_000) });
+    const verdict = r.verdict === 'off-task' ? 'side-task' : 'in-scope';
+    sideVerdicts.set(vkey, verdict);
+    log('side-judged', { verdict, source: r.source });
+    if (verdict === 'side-task') {
+      lastSide = { questId: quest.id, key };
+      await speak('side-task', { type: 'side-task', where: key });
+    }
+  }
+
+  // An agent (or the user) asks: is this new request part of the quest?
+  // Creep words or the local decider -> say so once, kindly, with options.
+  async function scopeCheck(request) {
+    const quest = store.activeQuest();
+    const text = String(request || '').slice(0, 400);
+    if (!quest) return { verdict: 'no-quest', suggestion: 'No active quest: start one with this request, or keep going.' };
+    let verdict = scopeHint(text) === 'creep' ? 'creep' : 'in-scope', source = 'words';
+    if (verdict !== 'creep' && judge && judge.mode !== 'off') {
+      const r = await judge.judge({ quest, nextStep: nextStep(quest), sample: { app: 'AI chat', title: text }, minutes: 0 });
+      if (r.verdict === 'off-task') { verdict = 'creep'; source = r.source; }
+    }
+    log('scope-check', { verdict, source });
+    if (verdict !== 'creep') return { verdict, quest: quest.title };
+    store.update((st) => ({ ...st, scope: { creepsByDay: { ...(st.scope?.creepsByDay || {}), [dayKey(now())]: ((st.scope?.creepsByDay || {})[dayKey(now())] || 0) + 1 } } }));
+    await speak('scope', { type: 'scope', reason: 'creep', request: text });
+    return { verdict, quest: quest.title, suggestion: `New scope. Finish and commit "${quest.title}" first, then park this (companion_park) or start it as its own quest.` };
+  }
+
+  // "It's part of it": the side task's page joins this quest's scope.
+  function allowScope() {
+    if (!lastSide) throw new Error('no side task to allow');
+    updateQuest(lastSide.questId, (q) => ({ ...q, scopeAllow: [...new Set([...(q.scopeAllow || []), lastSide.key])] }));
+    sideVerdicts.set(`${lastSide.questId}|${lastSide.key}`, 'in-scope');
+    log('scope-allowed', {});
+    const r = { allowed: lastSide.key };
+    lastSide = null;
+    return r;
+  }
+
   async function tick() {
     const st0 = store.get();
     if (st0.paused && st0.pausedUntil && now() >= st0.pausedUntil) { store.update((st) => ({ ...st, paused: false, pausedUntil: null })); log('resumed', { reason: 'snooze ended' }); ui.status?.({ label: lastLabel, paused: false, pausedUntil: null }); }
@@ -306,10 +407,15 @@ export function createCompanion({ store, watcher, makeBrain, ui, judge = null, c
         lastLabel = c.label;
         ui.status?.({ label: c.label, app: sample?.app });
       }
-      for (const event of drift.push({ label: c.label, at, reason: c.reason, match: c.match })) await react(event);
-
-      // Stuck: on-task time accumulates (gaps capped so sleep/lock never counts).
+      // Gaps are capped so sleep or a locked screen never counts as time.
       const gap = lastTickAt ? Math.min(at - lastTickAt, sampleEverySeconds * 2000) : 0;
+      await keepRhythm(sample, c, at, gap);
+      // During a call (and its grace period) drift doesn't build up at all, so the
+      // first nudge after the call isn't swallowed by a cooldown.
+      for (const event of drift.push({ label: quiet && c.label === 'drift' ? 'unclear' : c.label, at, reason: c.reason, match: c.match })) await react(event);
+      await guardScope(sample, c, at, quest);
+
+      // Stuck: on-task time accumulates.
       if (c.label === 'on-task') onTaskMs += gap;
       const step = nextStep(quest);
       if (step && onTaskMs >= T.stuckMinutes * 60_000) {
@@ -348,6 +454,8 @@ export function createCompanion({ store, watcher, makeBrain, ui, judge = null, c
     startSession,
     stopSession,
     planQuest,
+    scopeCheck,
+    allowScope,
     vault: () => store.get().vault || [],
     unpark(id) {
       const before = (store.get().vault || []).length;
@@ -387,6 +495,32 @@ export function createCompanion({ store, watcher, makeBrain, ui, judge = null, c
       log('quest-added', { title: quest.title });
     },
     setActiveQuest(id) { store.update((st) => ({ ...st, activeQuestId: id })); onTaskMs = 0; log('quest-activated', { id }); },
+    // Edit: title, deadline (boss), repo, keywords; steps are replaced only if given.
+    editQuest(id, patch = {}) {
+      const q = store.get().quests.find((x) => x.id === id);
+      if (!q) throw new Error('no such quest');
+      const str = (v, n) => String(v ?? '').trim().slice(0, n);
+      updateQuest(id, (x) => ({
+        ...x,
+        ...(patch.title != null && str(patch.title, 120) ? { title: str(patch.title, 120) } : {}),
+        ...(patch.deadline !== undefined ? { deadline: /^\d{4}-\d{2}-\d{2}$/.test(String(patch.deadline)) ? patch.deadline : null, boss: /^\d{4}-\d{2}-\d{2}$/.test(String(patch.deadline)) } : {}),
+        ...(patch.repo !== undefined ? { repo: str(patch.repo, 400) || null } : {}),
+        ...(Array.isArray(patch.allow) ? { allow: patch.allow.map((s) => str(s, 40).toLowerCase()).filter(Boolean).slice(0, 20) } : {}),
+        ...(Array.isArray(patch.steps) ? { steps: patch.steps.map((s) => str(s, 120)).filter(Boolean).slice(0, 30).map((text) => ({ id: newId('s'), text, done: false })) } : {}),
+      }));
+      log('quest-edited', { fields: Object.keys(patch) });
+      return { edited: true };
+    },
+    removeQuest(id) {
+      const st = store.get();
+      if (!st.quests.some((q) => q.id === id)) throw new Error('no such quest');
+      store.update((s) => {
+        const quests = s.quests.filter((q) => q.id !== id);
+        return { ...s, quests, activeQuestId: s.activeQuestId === id ? quests[0]?.id ?? null : s.activeQuestId };
+      });
+      log('quest-removed', {});
+      return { removed: true, active: store.activeQuest()?.title || null };
+    },
     addSteps(questId, steps) {
       store.update((st) => ({ ...st, quests: st.quests.map((q) => (q.id === questId ? { ...q, steps: [...q.steps, ...steps.map((text) => ({ id: newId('s'), text, done: false }))] } : q)) }));
       log('steps-added', { count: steps.length });
@@ -409,7 +543,7 @@ export function createCompanion({ store, watcher, makeBrain, ui, judge = null, c
     status() {
       const st = store.get();
       const quest = store.activeQuest();
-      return { session: st.session || null, paused: st.paused, pausedUntil: st.pausedUntil || null, label: lastLabel, quest: quest && { title: quest.title, next: nextStep(quest)?.text || null, boss: quest.boss ? bossHp(quest) : null }, level: levelProgress(st.game.xp.total), skills: st.game.xp.skills, titles: st.game.titles, streak: st.game.streak, nudges: st.nudges, nudgeAfterSeconds: driftAfter(), judge: judge?.mode || 'off', today: dayActivity() };
+      return { flow: rhythm.flow(), quiet, fullscreen, session: st.session || null, paused: st.paused, pausedUntil: st.pausedUntil || null, label: lastLabel, quest: quest && { title: quest.title, next: nextStep(quest)?.text || null, boss: quest.boss ? bossHp(quest) : null }, level: levelProgress(st.game.xp.total), skills: st.game.xp.skills, titles: st.game.titles, streak: st.game.streak, nudges: st.nudges, nudgeAfterSeconds: driftAfter(), judge: judge?.mode || 'off', today: dayActivity() };
     },
   };
 }
