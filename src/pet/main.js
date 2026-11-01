@@ -110,6 +110,15 @@ async function act(name, payload = {}) {
     // Only on a click in the HUD: the user asks for it; a backup is made first.
     case 'connect-claude': return connectClaude({ remove: claudeConnected() });
     case 'claude-status': return { connected: claudeConnected() };
+    case 'meta-status': return client.call('GET', '/meta/status');
+    case 'meta-logout': return client.call('POST', '/meta/logout', {});
+    case 'meta-login': {
+      const r = await client.call('POST', '/meta/login', {});
+      // Open only Meta's own https page, never an arbitrary URL from a response.
+      const u = new URL(r.verificationUri);
+      if (u.protocol === 'https:' && /(^|\.)meta\.com$/.test(u.hostname)) await shell.openExternal(u.href);
+      return r;
+    }
     case 'stats': { const r = await client.call('GET', '/stats'); await shell.openPath(r.htmlPath); return r.totals; }
     default: throw new Error(`unknown action ${name}`);
   }

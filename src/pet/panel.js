@@ -99,6 +99,32 @@ $('a-import').onclick = run('import');
 $('a-stats').onclick = run('stats');
 $('close').onclick = () => window.bd.act('panel');
 
+// AI card: the model chain, and "Sign in with Meta" (Muse Spark, no key needed).
+const showAi = (s) => {
+  $('ai-models').textContent = (s.models || 'templates').replace(/llama-local\/llama-3\.2-3b/, 'Llama 3.2 3B (this PC)').replace(/meta\/muse-spark[\w.-]*/, 'Muse Spark (Meta)').replace(/ -> /g, '  →  ') + '  →  templates';
+  $('a-meta').textContent = s.signedIn ? 'Sign out of Meta' : 'Sign in with Meta';
+  if (s.lastError && !s.signedIn) $('ai-code').textContent = `Meta sign-in failed: ${s.lastError}`;
+};
+const refreshAi = async () => { const r = await window.bd.act('meta-status'); if (r.ok) showAi(r.data); return r.ok ? r.data : null; };
+refreshAi();
+let metaPoll = null;
+$('a-meta').onclick = async () => {
+  const s = await refreshAi();
+  if (s?.signedIn) { const r = await window.bd.act('meta-logout'); if (r.ok) { $('ai-code').textContent = 'Signed out of Meta.'; refreshAi(); } return; }
+  $('ai-code').textContent = 'Asking Meta for a code…';
+  const r = await window.bd.act('meta-login');
+  if (!r.ok) { $('ai-code').textContent = `Meta sign-in failed: ${r.error}`; return; }
+  $('ai-code').innerHTML = 'Enter this code on the Meta page that just opened: <b></b>';
+  $('ai-code').querySelector('b').textContent = r.data.userCode;
+  clearInterval(metaPoll);
+  const until = Date.now() + (r.data.expiresInSeconds || 600) * 1000;
+  metaPoll = setInterval(async () => {
+    const st = await refreshAi();
+    if (st?.signedIn) { clearInterval(metaPoll); $('ai-code').textContent = 'Muse Spark connected. It writes your nudges now.'; }
+    else if (st?.lastError || Date.now() > until) { clearInterval(metaPoll); }
+  }, 3000);
+};
+
 // Connect Claude: adds the companion's tools to Claude Code (a second click removes them).
 const showClaude = (connected) => { $('a-claude').textContent = connected ? 'Claude: connected ✓' : 'Connect Claude'; $('a-claude').title = connected ? 'Click to disconnect' : 'Adds the companion tools to Claude Code (backs up ~/.claude.json first)'; };
 window.bd.act('claude-status').then((r) => r.ok && showClaude(r.data.connected));

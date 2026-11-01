@@ -14,6 +14,7 @@ import { killTestReport } from './report.js';
 import { importFromFile } from './jarvis.js';
 import { buildStats, renderStatsHtml } from './stats.js';
 import { ensureDeciderServer, ensureWriterServer } from './core/decider-server.js';
+import { startMetaLogin, metaSignedIn, metaSignOut } from './agent/meta-auth.js';
 import { fileURLToPath } from 'node:url';
 
 if (existsSync('.env')) process.loadEnvFile('.env');
@@ -61,7 +62,8 @@ if (!env.BD_LLAMA_URL && env.BD_WRITER !== 'off') {
 }
 process.on('exit', () => { decider?.child?.kill(); writer?.child?.kill(); });
 
-const { store, companion, modelLabel } = await createApp({ env, ui });
+const { store, companion, modelLabel, dataDir, reloadModels, modelLabelNow } = await createApp({ env, ui });
+let metaLogin = null; // the sign-in in progress, if any
 const token = randomBytes(24).toString('hex');
 
 const routes = {
@@ -118,6 +120,20 @@ const routes = {
     if (b.type === 'status') return ui.status(b.status || {}), { emitted: 'status' };
     throw new Error('type must be nudge, game or status');
   },
+  // Sign in with Meta: returns the code to enter on Meta's page; when the user
+  // finishes, Muse Spark joins the model chain without a restart.
+  'POST /meta/login': async () => {
+    metaLogin?.abort();
+    metaLogin = new AbortController();
+    const r = await startMetaLogin(dataDir, { signal: metaLogin.signal });
+    r.done.then(async () => { store.log('meta-signed-in', { models: await reloadModels() }); }).catch((e) => store.log('meta-login-error', { error: String(e.message || e).slice(0, 200) }));
+    return { verificationUri: r.verificationUri, userCode: r.userCode, expiresInSeconds: r.expiresInSeconds };
+  },
+  'GET /meta/status': () => {
+    const err = [...store.get().log].reverse().find((e) => e.type === 'meta-login-error' || e.type === 'meta-signed-in');
+    return { signedIn: metaSignedIn(dataDir), models: modelLabelNow(), lastError: err?.type === 'meta-login-error' ? err.error : null };
+  },
+  'POST /meta/logout': async () => { metaLogin?.abort(); metaSignOut(dataDir); return { signedIn: false, models: await reloadModels() }; },
   'POST /import/jarvis': (b) => {
     const added = importFromFile(b.path || JARVIS_NOW, store.get().quests);
     for (const q of added) companion.addQuest(q, { activate: false });

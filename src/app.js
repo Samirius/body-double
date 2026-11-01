@@ -1,5 +1,6 @@
 // Shared startup for every front end (terminal, background service, pet):
 // one store, one model handle, one companion loop.
+import path from 'node:path';
 import { createStore } from './core/store.js';
 import { createWatcher } from './core/watcher.js';
 import { createBrain, createJudge, createModelChain } from './agent/brain.js';
@@ -11,9 +12,19 @@ export async function createApp({ env = process.env, ui, log = console.log }) {
   const store = createStore(env.BD_DATA_DIR || undefined, { debounceMs: Number(env.BD_SAVE_MS ?? 2000) });
   // Batched saves must never be lost on exit.
   process.on('exit', () => store.flush());
-  // Nudge writers in order (Muse Spark with a Meta key, then Llama on this PC).
-  let modelHandles = [];
-  try { modelHandles = await createModelChain(env); } catch (e) { log(`model setup failed, using templates: ${e.message}`); }
+  // Nudge writers in order (Muse Spark with a Meta key or sign-in, then Llama
+  // on this PC). The brain holds this array, so reloadModels() swaps models in
+  // place (e.g. right after "Sign in with Meta").
+  const dataDir = path.dirname(store.file);
+  const modelHandles = [];
+  const reloadModels = async () => {
+    let next = [];
+    try { next = await createModelChain(env, { dataDir }); } catch (e) { log(`model setup failed, using templates: ${e.message}`); }
+    modelHandles.splice(0, modelHandles.length, ...next);
+    return labelOf();
+  };
+  const labelOf = () => (modelHandles.length ? modelHandles.map((h) => `${h.model?.provider}/${h.model?.id}`).join(' -> ') : 'templates (no model)');
+  await reloadModels();
   const modelHandle = modelHandles[0] || null;
   // BD_JUDGE: local (a decision model on this PC, see agent/decider.js; the
   // default when BD_DECIDER_URL is set) | title | screenshot | off.
@@ -30,7 +41,7 @@ export async function createApp({ env = process.env, ui, log = console.log }) {
     timing,
     sampleEverySeconds: num(env.BD_SAMPLE_SECONDS) || 15,
   });
-  return { store, companion, modelHandle, judgeMode: judge.mode, modelLabel: modelHandles.length ? modelHandles.map((h) => `${h.model?.provider}/${h.model?.id}`).join(' -> ') : 'templates (no model)' };
+  return { store, companion, modelHandle, judgeMode: judge.mode, modelLabel: labelOf(), dataDir, reloadModels, modelLabelNow: labelOf };
 }
 
 // Find a quest by id or by a case-insensitive fragment of its title.

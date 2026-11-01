@@ -3,7 +3,7 @@
 Everything here was measured on Samir's PC (Windows 10, AMD Ryzen 5 2400G, 14 GB RAM, CPU only). Raw files are
 in `eval/`. Where something failed, it says so.
 
-## 1. Automated tests: 65 pass
+## 1. Automated tests: 68 pass
 `npm test` covers the core rules, the brain and its model chain, learning from feedback, focus sessions, the
 vault, the local decision model, the background service end to end, and the pet's behaviour. No key or model is
 needed: models are replaced by pi-ai's faux provider or by a stand-in OpenAI-compatible server.

@@ -55,11 +55,12 @@ npm run setup:models    # llama.cpp + Kev-0.8B + Llama 3.2 3B from official sour
 npm run pet             # the creature appears; it starts the service and both local models itself
 node scripts/autostart.mjs   # optional: start at login + Desktop icon (--remove undoes it)
 ```
-Optional cloud model: put `META_API_KEY=...` in `.env` (Muse Spark goes first, Llama becomes the backup).
+Optional cloud model: click **Sign in with Meta** in the HUD (enter the code on Meta's page), or put `META_API_KEY=...`
+in `.env`. Muse Spark then goes first and Llama becomes the backup. The HUD's AI card shows which models are active.
 
 Check it yourself:
 ```bash
-npm test               # 65 tests, no key and no model needed
+npm test               # 68 tests, no key and no model needed
 npm run test:pet       # launches the real app, drives it, saves 6 screenshots, checks them
 npm run eval:decider   # the local decision model on 40 labelled window titles
 ```

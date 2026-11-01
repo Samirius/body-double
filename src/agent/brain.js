@@ -10,6 +10,7 @@
 // that is the whole question; see createJudge for the privacy switch.
 import { Agent } from '@earendil-works/pi-agent-core';
 import { createModels, createProvider, Type } from '@earendil-works/pi-ai';
+import { metaSignedIn, createMetaModels } from './meta-auth.js';
 
 export const SYSTEM_PROMPT = `You are a calm, warm focus companion for someone with ADHD. You speak first.
 Rules for every message:
@@ -62,14 +63,20 @@ export async function createLlamaHandle(baseUrl = 'http://127.0.0.1:18091/v1') {
   return { models, model, local: true, streamOptions: { toolChoice: 'required' } };
 }
 
-// Which models write nudges, in order: the configured one (Muse Spark with a
-// Meta key), then Llama on this PC when it runs. A failed call (no credits,
-// offline) falls through to the next; templates are the last resort.
-export async function createModelChain(env = process.env) {
+// Which models write nudges, in order: a cloud model (Muse Spark with a Meta
+// key or the HUD's "Sign in with Meta"; or z.ai), then Llama on this PC when
+// it runs. A failed call (no credits, offline) falls through to the next;
+// templates are the last resort.
+export async function createModelChain(env = process.env, { dataDir = null } = {}) {
   const chain = [];
   const primary = await createModelFromEnv(env);
-  if (primary) chain.push(primary);
-  if (env.BD_LLAMA_URL && !primary?.local) chain.push(await createLlamaHandle(env.BD_LLAMA_URL));
+  if (primary && !primary.local) chain.push(primary);
+  if (!chain.length && dataDir && metaSignedIn(dataDir)) {
+    const models = await createMetaModels(dataDir);
+    chain.push({ models, model: models.getModel('meta', env.BD_MODEL || 'muse-spark-1.3') });
+  }
+  if (primary?.local) chain.push(primary);
+  else if (env.BD_LLAMA_URL) chain.push(await createLlamaHandle(env.BD_LLAMA_URL));
   return chain;
 }
 
