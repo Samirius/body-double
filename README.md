@@ -61,7 +61,7 @@ in `.env`. Muse Spark then goes first and Llama becomes the backup. The HUD's AI
 Check it yourself:
 ```bash
 npm test               # 68 tests, no key and no model needed
-npm run test:pet       # launches the real app, drives it, saves 6 screenshots, checks them
+npm run test:pet       # launches the real app, drives it, saves 8 screenshots, checks them
 npm run eval:decider   # the local decision model on 40 labelled window titles
 ```
 

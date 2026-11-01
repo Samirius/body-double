@@ -9,7 +9,7 @@ vault, the local decision model, the background service end to end, and the pet'
 needed: models are replaced by pi-ai's faux provider or by a stand-in OpenAI-compatible server.
 
 `npm run test:pet` launches the real Electron app, drives it (a nudge, cheering, sleeping, the HUD, adding a
-quest, starting a focus session from the creature's own menu) and checks the six screenshots. The images in
+quest, answering the first-run question, starting a focus session from the creature's own menu) and checks the eight screenshots. With `--record` it also saves the short clips used in the video. The images in
 `docs/screens/` come from this run.
 
 ## 2. Soak test: 20 minutes, no leaks, no errors

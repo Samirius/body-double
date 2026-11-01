@@ -64,6 +64,7 @@ process.on('exit', () => { decider?.child?.kill(); writer?.child?.kill(); });
 
 const { store, companion, modelLabel, dataDir, reloadModels, modelLabelNow } = await createApp({ env, ui });
 let metaLogin = null; // the sign-in in progress, if any
+let metaError = null; // why the current sign-in attempt failed
 const token = randomBytes(24).toString('hex');
 
 const routes = {
@@ -124,14 +125,20 @@ const routes = {
   // finishes, Muse Spark joins the model chain without a restart.
   'POST /meta/login': async () => {
     metaLogin?.abort();
-    metaLogin = new AbortController();
-    const r = await startMetaLogin(dataDir, { signal: metaLogin.signal });
-    r.done.then(async () => { store.log('meta-signed-in', { models: await reloadModels() }); }).catch((e) => store.log('meta-login-error', { error: String(e.message || e).slice(0, 200) }));
+    const flow = new AbortController();
+    metaLogin = flow;
+    metaError = null;
+    const r = await startMetaLogin(dataDir, { signal: flow.signal });
+    r.done.then(async () => { store.log('meta-signed-in', { models: await reloadModels() }); }).catch((e) => {
+      if (flow.signal.aborted) return; // replaced by a newer attempt or signed out
+      metaError = String(e.message || e).slice(0, 200);
+      store.log('meta-login-error', { error: metaError });
+    });
     return { verificationUri: r.verificationUri, userCode: r.userCode, expiresInSeconds: r.expiresInSeconds };
   },
   'GET /meta/status': () => {
-    const err = [...store.get().log].reverse().find((e) => e.type === 'meta-login-error' || e.type === 'meta-signed-in');
-    return { signedIn: metaSignedIn(dataDir), models: modelLabelNow(), lastError: err?.type === 'meta-login-error' ? err.error : null };
+    // Only the current attempt's error counts, so a retry is not stopped by an old one.
+    return { signedIn: metaSignedIn(dataDir), models: modelLabelNow(), lastError: metaError };
   },
   'POST /meta/logout': async () => { metaLogin?.abort(); metaSignOut(dataDir); return { signedIn: false, models: await reloadModels() }; },
   'POST /import/jarvis': (b) => {
