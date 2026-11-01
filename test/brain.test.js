@@ -95,5 +95,7 @@ test('brain: Llama on this PC is driven over the OpenAI-compatible API with the 
     assert.equal(seen[0].url, '/v1/chat/completions');
     assert.equal(seen[0].body.model, 'llama-3.2-3b');
     assert.deepEqual(seen[0].body.tools.map((t) => t.function.name).sort(), ['nudge', 'split_step']);
+    // Llama must answer with a tool call, never plain text.
+    assert.equal(seen[0].body.tool_choice, 'required');
   } finally { srv.close(); }
 });

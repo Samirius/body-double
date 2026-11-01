@@ -56,7 +56,10 @@ export async function createLlamaHandle(baseUrl = 'http://127.0.0.1:18091/v1') {
     auth: { apiKey: { name: 'local', resolve: async () => ({ auth: { apiKey: 'local' } }) } },
     models: [model], api: openAICompletionsApi(),
   }));
-  return { models, model, local: true };
+  // "required" makes llama.cpp constrain the output to a valid tool call, so a
+  // small model can't answer in plain text (pi's type lists only auto/none;
+  // the OpenAI-compatible adapter passes the value through as is).
+  return { models, model, local: true, streamOptions: { toolChoice: 'required' } };
 }
 
 // Which models write nudges, in order: the configured one (Muse Spark with a
@@ -138,7 +141,7 @@ export function createBrain({ modelHandle = null, modelHandles = modelHandle ? [
         let nudged = false;
         const agent = new Agent({
           initialState: { systemPrompt: SYSTEM_PROMPT, model: handle.model, tools: tools.map((t) => (t.name === 'nudge' ? { ...t, execute: async (_id, p) => { nudged = true; await onNudge(p, `model:${handle.model.id}`); return { content: [{ type: 'text', text: 'shown' }], details: p, terminate: true }; } } : t)) },
-          streamFn: handle.models.streamSimple.bind(handle.models),
+          streamFn: (model, context, options) => handle.models.streamSimple(model, context, { ...options, ...handle.streamOptions }),
           identity: { attribution: null },
         });
         try {
@@ -179,7 +182,7 @@ export function createJudge({ modelHandle = null, mode = 'title', log = () => {}
       };
       const agent = new Agent({
         initialState: { systemPrompt: JUDGE_PROMPT, model: modelHandle.model, tools: [verdictTool] },
-        streamFn: modelHandle.models.streamSimple.bind(modelHandle.models),
+        streamFn: (model, context, options) => modelHandle.models.streamSimple(model, context, { ...options, ...modelHandle.streamOptions }),
         identity: { attribution: null },
       });
       const text = [
