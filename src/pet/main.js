@@ -17,6 +17,10 @@ import { buildFrame, frameToBitmap } from './sprites.js';
 const here = path.dirname(fileURLToPath(import.meta.url));
 const selftestIdx = process.argv.indexOf('--selftest');
 const SELFTEST_DIR = selftestIdx > 0 ? path.resolve(process.argv[selftestIdx + 1] || 'selftest-out') : null;
+// The self-test adds quests and finishes steps: never against real data.
+if (SELFTEST_DIR && !process.env.BD_DATA_DIR) { console.error('--selftest needs BD_DATA_DIR (a throwaway data folder); use npm run test:pet'); process.exit(2); }
+// --record (with --selftest): also save short frame sequences for the demo video.
+const RECORD = !!SELFTEST_DIR && process.argv.includes('--record');
 const STRIP_HEIGHT = 330; // room for the transmission bubble above the pet
 
 if (!SELFTEST_DIR && !app.requestSingleInstanceLock()) app.quit();
@@ -35,7 +39,7 @@ function createPet() {
   });
   pet.setAlwaysOnTop(true, 'floating');
   pet.setIgnoreMouseEvents(true, { forward: true });
-  pet.loadFile(path.join(here, 'pet.html'));
+  pet.loadFile(path.join(here, 'pet.html'), RECORD ? { query: { hold: '1' } } : {});
   pet.once('ready-to-show', () => pet.showInactive());
 }
 
@@ -125,6 +129,29 @@ async function selftest() {
   mkdirSync(SELFTEST_DIR, { recursive: true });
   const report = { steps: [] };
   const step = (k, v) => report.steps.push({ [k]: v });
+  // Frame sequence of the right-hand 640 px (bubble + creature) at ~15 fps while
+  // `during` runs, then until `seconds` have passed. Off unless --record.
+  const clip = async (name, seconds, during = async () => {}) => {
+    if (!RECORD) return during();
+    const dir = path.join(SELFTEST_DIR, 'clips', name);
+    mkdirSync(dir, { recursive: true });
+    const { width, height } = pet.getContentBounds();
+    const rect = { x: width - 640, y: 0, width: 640, height };
+    let n = 0, recording = true;
+    const started = Date.now();
+    const loop = (async () => {
+      while (recording || Date.now() - started < seconds * 1000) {
+        const t0 = Date.now();
+        writeFileSync(path.join(dir, `${String(n++).padStart(4, '0')}.png`), (await pet.webContents.capturePage(rect)).toPNG());
+        await wait(Math.max(0, 66 - (Date.now() - t0)));
+      }
+    })();
+    await during();
+    recording = false;
+    await loop;
+    report.clips = { ...report.clips, [name]: { frames: n, seconds: (Date.now() - started) / 1000 } };
+  };
+  const typeInto = async (text) => { for (let i = 1; i <= text.length; i++) { await pet.webContents.executeJavaScript(`document.getElementById('ask-in').value = ${JSON.stringify(text.slice(0, i))}; 0`); await wait(70); } };
   try {
     // Act only once the live event stream is up, as a person would.
     for (let i = 0; i < 80 && !connected; i++) await wait(250);
@@ -136,8 +163,11 @@ async function selftest() {
     if ((await bubbleTitle()) !== 'NUDGLING // ONLINE') throw new Error('first-run question did not appear');
     await wait(900);
     await shot(pet, '0-pet-ask');
-    await pet.webContents.executeJavaScript("(() => { document.getElementById('ask-in').value = 'Write the launch post'; document.getElementById('ask').requestSubmit(); })()");
-    for (let i = 0; i < 20 && (await bubbleTitle()) !== 'QUEST // ACCEPTED'; i++) await wait(250);
+    await clip('ask', 9, async () => {
+      if (RECORD) await typeInto('Write the launch post');
+      await pet.webContents.executeJavaScript("(() => { document.getElementById('ask-in').value = 'Write the launch post'; document.getElementById('ask').requestSubmit(); })()");
+      for (let i = 0; i < 20 && (await bubbleTitle()) !== 'QUEST // ACCEPTED'; i++) await wait(250);
+    });
     const afterAsk = await client.call('GET', '/status');
     step('asked', { quest: afterAsk.quest?.title, bubble: await bubbleTitle() });
     if (afterAsk.quest?.title !== 'Write the launch post') throw new Error('first-run answer did not become the quest');
@@ -150,6 +180,13 @@ async function selftest() {
     step('done', done.events.map((e) => e.type));
     await wait(1500);
     await shot(pet, '1-pet-cheer');
+    // Demo clip: a drift nudge types itself out, then the real Done button.
+    await clip('nudge', 8, async () => {
+      if (!RECORD) return;
+      await client.call('POST', '/debug/emit', { type: 'nudge', message: 'Quick check: "Banafah verification"?', nextAction: 'Upload storefront photo' });
+      await wait(3500);
+      await pet.webContents.executeJavaScript("document.getElementById('b-done').click()");
+    });
     await client.call('POST', '/debug/emit', { type: 'nudge', message: 'Quick check: "Banafah verification"?', nextAction: 'Upload storefront photo' });
     await wait(1200);
     await shot(pet, '2-pet-nudge');
@@ -162,8 +199,15 @@ async function selftest() {
     await shot(pet, '3-pet-sleep');
     // Start a focus session through the pet's own quick menu.
     await client.call('POST', '/pause', { paused: false });
-    await pet.webContents.executeJavaScript("(() => { const m = document.getElementById('menu'); m.style.display = 'flex'; m.querySelector('button[data-min=\"25\"]').click(); })()");
-    await wait(1800);
+    // Demo clip: the creature's menu opens, FOCUS 25, the ring starts counting.
+    await clip('ring', 9, async () => {
+      // The pet's frame loop places the menu once it is visible.
+      await pet.webContents.executeJavaScript("document.getElementById('menu').style.display = 'flex'; 0");
+      if (RECORD) await wait(1500);
+      await pet.webContents.executeJavaScript("document.querySelector('#menu button[data-min=\"25\"]').click()");
+      await wait(1800);
+      if (RECORD) { await wait(2500); await pet.webContents.executeJavaScript("document.getElementById('b-ok').click(); 0"); }
+    });
     const afterSession = await client.call('GET', '/status');
     step('session', afterSession.session && { kind: afterSession.session.kind, minutes: afterSession.session.minutes });
     if (afterSession.session?.kind !== 'focus') throw new Error('menu did not start a focus session');

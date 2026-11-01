@@ -22,7 +22,9 @@ mkdirSync(frames, { recursive: true });
 const run = (cmd, args, opts = {}) => { const r = spawnSync(cmd, args, { cwd: root, stdio: 'inherit', ...opts }); if (r.status !== 0) throw new Error(`${cmd} ${args.join(' ')} failed (${r.status})`); };
 
 // 1. Real app screenshots.
-if (!process.argv.includes('--reuse-shots') || !existsSync(path.join(shots, '6-pet-ring.png'))) run(process.execPath, ['scripts/pet-selftest.mjs', shots]);
+// --record also saves short clips of the real app (shots/clips/<name>/NNNN.png).
+if (!process.argv.includes('--reuse-shots') || !existsSync(path.join(shots, 'clips', 'ring'))) run(process.execPath, ['scripts/pet-selftest.mjs', shots, '--record']);
+const clipInfo = JSON.parse(readFileSync(path.join(shots, 'report.json'), 'utf8')).clips || {};
 if (!existsSync(path.join(root, 'docs', 'sprites.png'))) run(process.execPath, ['scripts/sprite-sheet.mjs', 'docs/sprites.png', '6']);
 const img = (p) => `data:image/png;base64,${readFileSync(p).toString('base64')}`;
 // The pet shots are full-width strips; crop to the area around the pet.
@@ -34,14 +36,19 @@ try {
   const st = JSON.parse(readFileSync(path.join(process.env.BD_DATA_DIR || defaultDataDir(), 'state.json'), 'utf8'));
   const s = buildStats(st);
   // Only a real session counts: at least one finished step (a quest was in play).
-  if (s.totals.steps > 0) evidence = s.totals;
+  // Only on request (npm run video -- --real-evidence) after a real work hour.
+  if (s.totals.steps > 0 && process.argv.includes('--real-evidence')) evidence = s.totals;
 } catch { /* no real data yet */ }
 
 const esc = (s) => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;');
 const slides = [];
-const add = (body, say) => slides.push({ body, say });
+const add = (body, say, clip = null) => slides.push({ body, say, clip });
 // The pet shots are 260 px tall full-width strips; show the right-hand part, scaled.
 const cropStrip = (src, w = 900, h = 390) => `<div class="crop" style="width:${w}px;height:${h}px"><img src="${src}"></div>`;
+// A slot the real clip (640x330) plays in; render.ps1 overlays it. Still image if no clip.
+const CLIP_W = 800, CLIP_H = 412;
+const clipSlot = (name, still) => (clipInfo[name] ? `<div class="crop clip-slot" style="width:${CLIP_W}px;height:${CLIP_H}px"></div>` : cropStrip(strip(still), CLIP_W, CLIP_H));
+const clipOf = (name) => (clipInfo[name] ? { name, fps: Math.round((clipInfo[name].frames / clipInfo[name].seconds) * 10) / 10, frames: clipInfo[name].frames } : null);
 
 // Measured numbers from eval/ (only what exists is shown).
 const readJson = (p) => { try { return JSON.parse(readFileSync(path.join(root, p), 'utf8')); } catch { return null; } };
@@ -53,10 +60,12 @@ add(`<div class="center"><div class="kicker">META GLOBAL AI DEVELOPER HACKATHON 
   'I have ADHD. Every focus app I have tried waits for me to open it. I never do. So I built one that speaks first.');
 add(`<h2>// MEET THE NUDGLING</h2><img class="sheet" src="${img(path.join(root, 'docs', 'sprites.png'))}"><p class="note">Six moods, four evolution stages. Procedural pixel art, drawn by code.</p>`,
   'This is the Nudgling. It lives on the bottom edge of my screen. It sleeps when I am away, it worries when I drift, and it celebrates when I finish something. And it grows as I level up.');
-add(`<h2>// WHEN I DRIFT, IT SPEAKS FIRST</h2>${cropStrip(strip('2-pet-nudge'))}<div class="chips"><span>Names the quest, never lectures</span><span><b>One next action</b> under 2 min</span><span>Done · Park it · Snooze · Wrong</span></div>`,
-  'When I drift for a few minutes, it does not lecture me. It names my quest and gives me one next action I can do in under two minutes. If the distraction is a good idea, I park it for later.');
-add(`<h2>// CLICK IT: A FOCUS RING</h2>${cropStrip(strip('6-pet-ring'))}<div class="chips"><span>FOCUS 25 · FOCUS 50</span><span>Then a 5-minute break</span><span>Quiet during the break</span></div>`,
-  'Click it, and it starts a focus session. A ring counts down around it. Then it sends me to drink water, and stays quiet during the break.');
+add(`<h2>// FIRST, IT ASKS</h2>${clipSlot('ask', '0-pet-ask')}<div class="chips"><span>One thing, in my words</span><span>Split into <b>tiny steps</b></span></div>`,
+  'The first time it wakes up, it asks what I am working on. I name one thing, and it breaks it into tiny steps.', clipOf('ask'));
+add(`<h2>// WHEN I DRIFT, IT SPEAKS FIRST</h2>${clipSlot('nudge', '2-pet-nudge')}<div class="chips"><span>Names the quest, never lectures</span><span><b>One next action</b> under 2 min</span><span>Done · Park it · Snooze · Wrong</span></div>`,
+  'When I drift for a few minutes, it does not lecture me. It names my quest and gives me one next action I can do in under two minutes. If the distraction is a good idea, I park it for later.', clipOf('nudge'));
+add(`<h2>// CLICK IT: A FOCUS RING</h2>${clipSlot('ring', '6-pet-ring')}<div class="chips"><span>FOCUS 25 · FOCUS 50</span><span>Then a 5-minute break</span><span>Quiet during the break</span></div>`,
+  'Click it, and it starts a focus session. A ring counts down around it. Then it sends me to drink water, and stays quiet during the break.', clipOf('ring'));
 add(`<h2>// IT LEARNS ME</h2><div class="flow"><div>WRONG<small>that site is fine for this quest · wait 30 s longer</small></div><div>MISSED IT<small>block what I was on · react 30 s sooner</small></div><div>EVERY RULE<small>can be listed and undone</small></div></div>`,
   'Wrong nudges and missed drifts teach it. YouTube can be research for one quest and a trap for another. It also learns how long to wait before speaking up.');
 add(`<h2>// PROGRESS IS THE GAME</h2><div class="pair">${cropStrip(strip('1-pet-cheer'), 600, 390)}<img class="panel" src="${strip('5-panel-after-add')}"></div><p class="note">XP for finished steps, never time · deadlines are bosses · streaks forgive a missed day</p>`,
@@ -99,7 +108,7 @@ const manifest = [];
 slides.forEach((s, i) => s.say.split(/(?<=[.!?])\s+(?=[A-Z])/).forEach((sentence, j, arr) => {
   const n = `${String(i + 1).padStart(2, '0')}-${String(j + 1).padStart(2, '0')}`;
   writeFileSync(path.join(frames, `frame${n}.html`), `<!doctype html><html><head><meta charset="utf-8"><style>${css}</style></head><body><div class="wrap">${s.body}</div><div class="cap">${esc(sentence)}</div></body></html>`);
-  manifest.push({ n, last: j === arr.length - 1, say: sentence });
+  manifest.push({ n, last: j === arr.length - 1, say: sentence, clip: s.clip ? { ...s.clip, dir: path.join(shots, 'clips', s.clip.name) } : null });
 }));
 writeFileSync(path.join(frames, 'manifest.json'), JSON.stringify(manifest, null, 2));
 // The script to read aloud always matches the video.

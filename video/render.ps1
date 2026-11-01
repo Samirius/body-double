@@ -8,7 +8,7 @@ $manifest = Get-Content (Join-Path $Dir 'manifest.json') -Raw -Encoding UTF8 | C
 $synth = New-Object System.Speech.Synthesis.SpeechSynthesizer
 $synth.SelectVoice('Microsoft Zira Desktop')
 $synth.Rate = 0
-$list = @(); $srt = @(); $t = 0.0; $i = 0
+$list = @(); $srt = @(); $t = 0.0; $i = 0; $clipT = @{}
 function Ts([double]$s) { $ts = [TimeSpan]::FromSeconds($s); '{0:00}:{1:00}:{2:00},{3:000}' -f [int][math]::Floor($ts.TotalHours), $ts.Minutes, $ts.Seconds, $ts.Milliseconds }
 foreach ($m in $manifest) {
   $i++
@@ -24,7 +24,20 @@ foreach ($m in $manifest) {
   $pad = if ($m.last) { 0.9 } else { 0.25 }
   $len = [math]::Round($dur + $pad, 2)
   $seg = Join-Path $Dir "seg$($m.n).mp4"
-  & ffmpeg -y -v error -loop 1 -framerate 30 -i (Join-Path $Dir "frame$($m.n).png") -i $wav -af "apad" -t $len -c:v libx264 -tune stillimage -pix_fmt yuv420p -r 30 -c:a aac -ar 48000 -ac 2 -b:a 128k $seg
+  $slotFile = Join-Path $Dir "frame$($m.n).slot.json"
+  if ($m.clip -and (Test-Path $slotFile)) {
+    # A real clip of the app plays inside the slide's slot, continuing across the
+    # slide's sentences (start frame = time already shown, wrapped).
+    $slot = Get-Content $slotFile -Raw | ConvertFrom-Json
+    if (-not $clipT.ContainsKey($m.clip.name)) { $clipT[$m.clip.name] = 0.0 }
+    $start = [int]([math]::Floor($clipT[$m.clip.name] * $m.clip.fps)) % [int]$m.clip.frames
+    $clipT[$m.clip.name] += $len
+    $fc = "[1:v]scale=$($slot.w):$($slot.h):flags=neighbor,fps=30[c];[0:v][c]overlay=$($slot.x):$($slot.y):shortest=0[v];[2:a]apad[a]"
+    & ffmpeg -y -v error -loop 1 -framerate 30 -i (Join-Path $Dir "frame$($m.n).png") -stream_loop -1 -framerate $m.clip.fps -start_number $start -i (Join-Path $m.clip.dir '%04d.png') -i $wav -filter_complex $fc -map '[v]' -map '[a]' -t $len -c:v libx264 -pix_fmt yuv420p -r 30 -c:a aac -ar 48000 -ac 2 -b:a 128k $seg
+  } else {
+    & ffmpeg -y -v error -loop 1 -framerate 30 -i (Join-Path $Dir "frame$($m.n).png") -i $wav -af "apad" -t $len -c:v libx264 -tune stillimage -pix_fmt yuv420p -r 30 -c:a aac -ar 48000 -ac 2 -b:a 128k $seg
+  }
+  if ($LASTEXITCODE -ne 0) { throw "ffmpeg failed on segment $($m.n)" }
   $list += "file '$($seg -replace '\\','/')'"
   $srt += "$i`n$(Ts $t) --> $(Ts ($t + $dur))`n$($m.say)`n"
   $t += $len

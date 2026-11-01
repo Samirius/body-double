@@ -12,6 +12,8 @@ const $ = (id) => document.getElementById(id);
 
 const state = { label: null, paused: false, stage: 1, cheerUntil: 0, bubbleUntil: 0, connected: true, session: null };
 const wander = createWanderer({ width: () => innerWidth, sprite: SPR });
+// Recording the demo clips: stay in one spot so the crop keeps the creature.
+const HOLD = new URLSearchParams(location.search).has('hold');
 
 function resize() { canvas.width = innerWidth; canvas.height = innerHeight; ctx.imageSmoothingEnabled = false; }
 addEventListener('resize', resize);
@@ -39,7 +41,7 @@ function loop(now) {
   const talking = now < state.bubbleUntil;
   if (!talking && bubble.style.display === 'block') hideBubble();
   const pose = decidePose({ now, cheerUntil: state.cheerUntil, talking, label: state.label, paused: state.paused, moving: wander.moving() });
-  wander.step(dt, { canMove: pose === 'idle' || pose === 'walk' || pose === 'worry' });
+  wander.step(dt, { canMove: !HOLD && (pose === 'idle' || pose === 'walk' || pose === 'worry') });
   ctx.clearRect(0, 0, canvas.width, canvas.height);
   draw(buildFrame({ state: pose, t, stage: state.stage, facing: wander.facing() }), wander.x(), canvas.height - SPR - GROUND);
   drawRing(Date.now());
