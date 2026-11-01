@@ -31,6 +31,10 @@
   .bubble .next { margin-top: 9px; padding: 7px 9px; font: 700 15px var(--hud); color: var(--cyan); background: rgba(0, 240, 255, .07); border-left: 3px solid var(--cyan); text-shadow: 0 0 8px rgba(0,240,255,.55); }
   .bubble .next::before { content: "▶ NEXT  "; font: 600 10px var(--mono); letter-spacing: .12em; color: var(--muted); text-shadow: none; }
   .bubble .actions { display: flex; gap: 6px; margin-top: 11px; }
+  .bubble .ask { display: none; gap: 6px; margin-top: 10px; }
+  .bubble .ask input { flex: 1; min-width: 0; padding: 8px 9px; font: 600 14px var(--hud); color: var(--ink); background: rgba(0, 240, 255, .06); border: 1px solid var(--cyan); outline: none; caret-color: var(--cyan); }
+  .bubble .ask input::placeholder { color: var(--muted); }
+  .bubble .ask button { flex: none; cursor: pointer; padding: 0 14px; font: 700 12px var(--mono); letter-spacing: .1em; color: var(--void); background: var(--green); border: 0; }
   .bubble button { flex: 1; cursor: pointer; padding: 7px 4px; font: 700 11px var(--mono); letter-spacing: .08em; text-transform: uppercase; color: var(--ink); background: transparent; border: 1px solid #3a3f78;
     clip-path: polygon(6px 0, 100% 0, 100% calc(100% - 6px), calc(100% - 6px) 100%, 0 100%, 0 6px); transition: background .12s, color .12s; }
   .bubble button:hover { background: #2a2f63; }
@@ -65,6 +69,7 @@
     <div class="body">
       <div class="msg"><span id="msg"></span><span class="caret"></span></div>
       <div class="next" id="next"></div>
+      <form class="ask" id="ask" autocomplete="off"><input id="ask-in" maxlength="120" placeholder="e.g. Banafah verification"><button type="submit">GO</button></form>
       <div class="actions">
         <button class="primary" id="b-done">Done</button>
         <button class="park" id="b-park" title="Save it for later and go back">Park it</button>
@@ -76,7 +81,7 @@
     <div class="tail"></div>
   </div>
   <div class="menu" id="menu">
-    <button data-min="25">FOCUS 25</button><button data-min="50">FOCUS 50</button><button class="stop" id="m-stop">STOP</button><button id="m-hud">HUD</button>
+    <button id="m-quest">QUEST</button><button data-min="25">FOCUS 25</button><button data-min="50">FOCUS 50</button><button class="stop" id="m-stop">STOP</button><button id="m-hud">HUD</button>
   </div>
   <div class="offline" id="offline">// LINK LOST — RECONNECTING</div>
   <script type="module" src="pet.js"></script>

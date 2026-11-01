@@ -73,6 +73,8 @@ const routes = {
     companion.addQuest(q, { activate: b.activate !== false });
     return { added: q.title, id: q.id, active: b.activate !== false };
   },
+  // Answers at once; the plan arrives as a nudge event (a model may take a few seconds).
+  'POST /quests/plan': () => { companion.planQuest().catch((e) => store.log('plan-error', { error: String(e.message || e).slice(0, 200) })); return { planning: true }; },
   'POST /quests/activate': (b) => {
     const q = findQuest(store.get().quests, b.query);
     if (!q) throw new Error(`no quest matches "${b.query}"`);

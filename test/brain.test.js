@@ -99,3 +99,10 @@ test('brain: Llama on this PC is driven over the OpenAI-compatible API with the 
     assert.equal(seen[0].body.tool_choice, 'required');
   } finally { srv.close(); }
 });
+
+test('brain: a freshly named quest gets a plan nudge, and a model can split it into steps first', async () => {
+  const shown = [];
+  await createBrain({ onNudge: async (n) => shown.push(n), onSplit: async () => {} }).handle({ quest: { title: 'Launch post', tag: 'General' }, nextStep: null, event: { type: 'plan' }, stats });
+  assert.match(shown[0].message, /Quest set: "Launch post"/);
+  assert.match(buildPrompt({ quest: { title: 'Launch post', tag: 'General' }, nextStep: null, event: { type: 'plan' }, stats }), /call split_step/);
+});

@@ -85,6 +85,7 @@ function toggleMenu(show = menu.style.display !== 'flex') {
 menu.querySelectorAll('button[data-min]').forEach((b) => { b.onclick = async () => { toggleMenu(false); await act('session', { minutes: Number(b.dataset.min) }); refreshStatus(); }; });
 $('m-stop').onclick = async () => { toggleMenu(false); await act('session', { action: 'stop' }); refreshStatus(); };
 $('m-hud').onclick = () => { toggleMenu(false); act('panel'); };
+$('m-quest').onclick = () => { toggleMenu(false); askQuest(); };
 
 // --- transmission bubble ---------------------------------------------------
 const KIND = {
@@ -92,6 +93,8 @@ const KIND = {
   chat: { title: 'SIGNAL // OFF-QUEST CHAT', accent: '#ff2bd6' },
   stuck: { title: 'ASSIST // STEP TOO BIG?', accent: '#f5ff3b' },
   morning: { title: 'BOOT // TODAY’S RUN', accent: '#00f0ff' },
+  ask: { title: 'NUDGLING // ONLINE', accent: '#39ff9a' },
+  plan: { title: 'QUEST // ACCEPTED', accent: '#39ff9a' },
   'session-start': { title: 'SESSION // ENGAGED', accent: '#00f0ff' },
   'session-end': { title: 'SESSION // COMPLETE', accent: '#39ff9a' },
   'break-end': { title: 'BREAK // OVER', accent: '#00f0ff' },
@@ -120,15 +123,36 @@ function showBubble({ message, nextAction, kind = 'drift' }) {
   const drift = kind === 'drift' || kind === 'chat';
   $('b-wrong').style.display = drift ? '' : 'none';
   $('b-park').style.display = drift ? '' : 'none';
-  $('b-snooze').style.display = kind === 'evening' ? 'none' : '';
+  // Questions and plan confirmations only need OK / Later.
+  const plain = kind === 'ask' || kind === 'plan';
+  $('b-snooze').style.display = kind === 'evening' || plain ? 'none' : '';
+  $('b-done').style.display = plain ? 'none' : '';
   $('b-ok').style.display = drift ? 'none' : '';
+  $('b-ok').textContent = kind === 'ask' ? 'Later' : 'OK';
+  $('ask').style.display = kind === 'ask' ? 'flex' : 'none';
+  window.bd.setTyping(kind === 'ask');
   bubble.style.display = 'none';
   void bubble.offsetWidth; // restart the boot animation
   bubble.style.display = 'block';
   state.bubbleUntil = performance.now() + 90_000;
   placeBubble();
 }
-function hideBubble() { bubble.style.display = 'none'; state.bubbleUntil = 0; clearInterval(typing); }
+function hideBubble() { bubble.style.display = 'none'; state.bubbleUntil = 0; clearInterval(typing); if ($('ask').style.display !== 'none') { $('ask').style.display = 'none'; window.bd.setTyping(false); } }
+
+// --- the question: "what are you working on?" (first run, or QUEST in the menu)
+function askQuest() {
+  showBubble({ message: 'What are you working on right now?', nextAction: 'One thing. I\'ll split it into tiny steps.', kind: 'ask' });
+  $('ask-in').value = '';
+  setTimeout(() => $('ask-in').focus(), 50);
+}
+$('ask').onsubmit = async (e) => {
+  e.preventDefault();
+  const title = $('ask-in').value.trim();
+  if (!title) return;
+  hideBubble();
+  await act('quick-quest', { title });
+};
+$('ask-in').onkeydown = (e) => { if (e.key === 'Escape') hideBubble(); };
 
 async function act(name, payload) {
   const r = await window.bd.act(name, payload);
@@ -193,6 +217,8 @@ async function refreshStatus() {
   state.stage = petStage(r.data.level.level);
   state.session = r.data.session || null;
   applyGlow();
+  // First run (or every quest finished): ask once per launch instead of nudging about nothing.
+  if (!r.data.quest && !state.asked) { state.asked = true; askQuest(); }
 }
 
 window.bd.onConnection((s) => { state.connected = s === 'connected'; $('offline').style.display = state.connected ? 'none' : 'block'; if (state.connected) refreshStatus(); });

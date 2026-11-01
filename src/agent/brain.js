@@ -86,6 +86,7 @@ export function templateNudge({ quest, nextStep, event }) {
     case 'session-start': return { message: `${event.minutes}:00 on the clock${quest ? ` for ${what}` : ''}. I'll keep watch.`, nextAction: step ? `First, just: ${step}` : 'First, just open what you need' };
     case 'session-end': return { message: `${event.minutes} minutes done. That counts.`, nextAction: `Stand up and drink water (${event.breakMinutes} min break)` };
     case 'break-end': return { message: 'Break over. Back in?', nextAction: step || 'Pick the next tiny step' };
+    case 'plan': return { message: `Quest set: ${what}. I'll keep you on it.`, nextAction: step ? `First, just: ${step}` : 'Name the very first tiny step (under 2 min)' };
     case 'chat': return { message: `This chat is not about ${what}. Park the idea and come back?`, nextAction: step ? `Save the idea in one line, then: ${step}` : 'Save the idea in one line, then return to your quest' };
     default:
       // Without a quest, "your quest is waiting" means nothing: ask for one thing instead.
@@ -104,6 +105,7 @@ export function buildPrompt({ quest, nextStep, event, stats, now = new Date() })
     stuck: () => `on task for ${mins(event.onTaskSeconds)} min without finishing the step (possibly stuck)`,
     morning: () => `start of the day. ${event.summary || ''}`,
     evening: () => `end of the day. ${event.summary || ''}`,
+    plan: () => 'they just named this quest. If it has no steps or the next one is bigger than ~10 minutes, call split_step with 2-5 tiny concrete steps (the first under 2 minutes), then nudge toward the first',
     chat: () => `they are chatting with an AI assistant about something unrelated to the quest (${event.reason || 'off-topic'}); suggest parking the idea in one line`,
   }[event.type]?.() || event.type;
   return [

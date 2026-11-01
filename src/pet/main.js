@@ -94,6 +94,14 @@ async function act(name, payload = {}) {
       const deadline = /^\d{4}-\d{2}-\d{2}$/.test(String(payload.deadline || '')) ? payload.deadline : undefined;
       return client.call('POST', '/quests', { title, steps, allow, deadline, tag: str(payload.tag, 30) || 'General' });
     }
+    // First-run question in the bubble: name one thing, the brain plans it.
+    case 'quick-quest': {
+      const title = String(payload.title ?? '').trim().slice(0, 120);
+      if (!title) throw new Error('a quest needs a title');
+      const added = await client.call('POST', '/quests', { title, tag: 'General' });
+      await client.call('POST', '/quests/plan', {});
+      return added;
+    }
     case 'panel': return togglePanel();
     // Only on a click in the HUD: the user asks for it; a backup is made first.
     case 'connect-claude': return connectClaude({ remove: claudeConnected() });
@@ -107,6 +115,9 @@ ipcMain.handle('bd:act', async (_e, name, payload) => {
   try { return { ok: true, data: await act(name, payload) }; } catch (e) { return { ok: false, error: String(e.message || e) }; }
 });
 ipcMain.on('bd:interactive', (_e, on) => { if (pet && !pet.isDestroyed()) pet.setIgnoreMouseEvents(!on, { forward: true }); });
+// The strip never takes focus (it must not steal typing), except while its
+// question field is open.
+ipcMain.on('bd:typing', (_e, on) => { if (!pet || pet.isDestroyed()) return; pet.setFocusable(!!on); if (on) pet.focus(); else pet.blur(); });
 
 async function selftest() {
   const shot = async (win, name) => { const img = await win.webContents.capturePage(); writeFileSync(path.join(SELFTEST_DIR, `${name}.png`), img.toPNG()); };
@@ -119,6 +130,20 @@ async function selftest() {
     for (let i = 0; i < 80 && !connected; i++) await wait(250);
     if (!connected) throw new Error('event stream never connected');
     step('connected', true);
+    // First run: no quest, so the creature asks. Answer it through the real form.
+    const bubbleTitle = () => pet.webContents.executeJavaScript("document.getElementById('bubble').style.display === 'block' ? document.getElementById('b-title').textContent : null");
+    for (let i = 0; i < 20 && (await bubbleTitle()) !== 'NUDGLING // ONLINE'; i++) await wait(250);
+    if ((await bubbleTitle()) !== 'NUDGLING // ONLINE') throw new Error('first-run question did not appear');
+    await wait(900);
+    await shot(pet, '0-pet-ask');
+    await pet.webContents.executeJavaScript("(() => { document.getElementById('ask-in').value = 'Write the launch post'; document.getElementById('ask').requestSubmit(); })()");
+    for (let i = 0; i < 20 && (await bubbleTitle()) !== 'QUEST // ACCEPTED'; i++) await wait(250);
+    const afterAsk = await client.call('GET', '/status');
+    step('asked', { quest: afterAsk.quest?.title, bubble: await bubbleTitle() });
+    if (afterAsk.quest?.title !== 'Write the launch post') throw new Error('first-run answer did not become the quest');
+    if ((await bubbleTitle()) !== 'QUEST // ACCEPTED') throw new Error('no plan after naming the quest');
+    await wait(900);
+    await shot(pet, '0-pet-plan');
     await client.call('POST', '/quests', { title: 'Banafah verification', steps: ['Add store hours in Merchant Center', 'Upload storefront photo', 'Request review'], tag: 'Client Work', deadline: '2026-11-06', allow: ['merchant center'] });
     step('quest', 'added');
     const done = await client.call('POST', '/steps/done');

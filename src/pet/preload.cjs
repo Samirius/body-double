@@ -8,4 +8,5 @@ contextBridge.exposeInMainWorld('bd', {
   onConnection: (fn) => ipcRenderer.on('bd:connection', (_e, s) => fn(s)),
   onRefresh: (fn) => ipcRenderer.on('bd:refresh', () => fn()),
   setInteractive: (on) => ipcRenderer.send('bd:interactive', !!on),
+  setTyping: (on) => ipcRenderer.send('bd:typing', !!on),
 });

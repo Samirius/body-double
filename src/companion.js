@@ -179,6 +179,14 @@ export function createCompanion({ store, watcher, makeBrain, ui, judge = null, c
     await speak('session-start', { type: 'session-start', minutes: m });
     return session;
   }
+  // A quest was just named (e.g. in the pet's first-run question): the brain
+  // breaks it into tiny steps when it has none, and points at the first one.
+  async function planQuest() {
+    if (!store.activeQuest()) throw new Error('no active quest to plan');
+    log('plan', {});
+    await speak('plan', { type: 'plan' });
+  }
+
   function stopSession() { const s = sessionNow(); setSession(null); log('session-stop', {}); return { stopped: !!s }; }
   async function checkSession(at, label) {
     const s = sessionNow();
@@ -339,6 +347,7 @@ export function createCompanion({ store, watcher, makeBrain, ui, judge = null, c
     park,
     startSession,
     stopSession,
+    planQuest,
     vault: () => store.get().vault || [],
     unpark(id) {
       const before = (store.get().vault || []).length;
