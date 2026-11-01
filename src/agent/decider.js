@@ -9,17 +9,23 @@
 import { createModels, createProvider } from '@earendil-works/pi-ai';
 import { typesafeSystemOneApi } from '@earendil-works/pi-ai/api/typesafe-system-one.lazy';
 
-export const DECIDER_QUESTION = {
-  fit: {
-    type: 'choice',
-    instructions: "Is the window the user has been looking at part of their current quest?",
-    criteria: {
-      'on-task': 'Plausibly work on the quest: its tools, documents, research, or communication about it.',
-      'off-task': 'Clearly unrelated: entertainment, social feeds, news, shopping, games, or a different project.',
-      unsure: 'The title does not say enough to tell.',
+// Two options, no "unsure": measured on eval/decider/cases.json with Julia-1,
+// a third "unsure" option absorbed 29 of 40 answers (18% accuracy), while this
+// binary wording reached 71% with no false nudges. Uncertainty comes from the
+// probability instead (below the threshold = stay quiet).
+export function deciderQuestion(questTitle) {
+  return {
+    fit: {
+      type: 'choice',
+      instructions: "Is this window part of the user's quest, or something else?",
+      criteria: {
+        work: `Working on "${questTitle || 'the current task'}": its tools, documents, research or messages about it.`,
+        other: 'Something unrelated: entertainment, social media, news, sports, shopping, games, or a different project.',
+      },
     },
-  },
-};
+  };
+}
+const VERDICT = { work: 'on-task', other: 'off-task' };
 
 export function isLocalUrl(url) {
   try { return ['127.0.0.1', 'localhost', '[::1]', '::1'].includes(new URL(url).hostname); } catch { return false; }
@@ -55,10 +61,11 @@ export function createDecider({ baseUrl = 'http://127.0.0.1:18090/v1', modelId =
         next_step: nextStep ? nextStep.text : '',
         app: sample?.app || '',
         window_title: String(sample?.title || '').slice(0, 300),
-        minutes_in_window: minutes,
+        // minutes_in_window is deliberately not sent: with Julia-1 that one extra
+        // field flipped clear drifts (Netflix, Steam) to 'work' at p~1.0.
       };
       let result;
-      try { result = await models.classify(model, { state, questions: DECIDER_QUESTION }); } catch (e) { result = { stopReason: 'error', errorMessage: String(e.message || e) }; }
+      try { result = await models.classify(model, { state, questions: deciderQuestion(quest?.title) }); } catch (e) { result = { stopReason: 'error', errorMessage: String(e.message || e) }; }
       const ms = Date.now() - started;
       if (result.stopReason === 'error' || !result.answers?.fit) {
         log('decider-error', { error: String(result.errorMessage || 'no answer').slice(0, 200) });
@@ -66,9 +73,10 @@ export function createDecider({ baseUrl = 'http://127.0.0.1:18090/v1', modelId =
       }
       const fit = result.answers.fit;
       const p = fit.probabilities?.[fit.choice] ?? fit.confidence ?? 0;
+      const choice = VERDICT[fit.choice] || 'unsure';
       // Only act when it is confident; otherwise stay quiet (unsure = no nudge).
-      const verdict = fit.choice !== 'unsure' && p >= threshold ? fit.choice : 'unsure';
-      return { verdict, reason: `${fit.choice} p=${p.toFixed(2)} (${modelId})`, source: 'local', probability: p, probabilities: fit.probabilities, ms };
+      const verdict = choice !== 'unsure' && p >= threshold ? choice : 'unsure';
+      return { verdict, choice, reason: `${choice} p=${p.toFixed(2)} (${modelId})`, source: 'local', probability: p, probabilities: fit.probabilities, ms };
     },
   };
 }

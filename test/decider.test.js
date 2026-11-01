@@ -4,7 +4,7 @@ import http from 'node:http';
 import { mkdtempSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
-import { createDecider, isLocalUrl, DECIDER_QUESTION } from '../src/agent/decider.js';
+import { createDecider, isLocalUrl, deciderQuestion } from '../src/agent/decider.js';
 import { createStore, makeQuest } from '../src/core/store.js';
 import { createBrain } from '../src/agent/brain.js';
 import { createCompanion } from '../src/companion.js';
@@ -23,7 +23,9 @@ async function mockSystemOne(answer) {
   await new Promise((r) => server.listen(0, '127.0.0.1', r));
   return { url: `http://127.0.0.1:${server.address().port}/v1`, requests, close: () => new Promise((r) => server.close(r)) };
 }
-const fit = (choice, p) => ({ type: 'choice', choice, probabilities: { 'on-task': 0, 'off-task': 0, unsure: 0, [choice]: p }, confidence: p });
+// Tests speak in verdicts; the wire uses the binary labels work / other.
+const WIRE = { 'on-task': 'work', 'off-task': 'other' };
+const fit = (verdict, p) => { const choice = WIRE[verdict]; return { type: 'choice', choice, probabilities: { work: 1 - p, other: 1 - p, [choice]: p }, confidence: p }; };
 const quest = { title: 'Banafah verification', tag: 'Client Work' };
 const sample = { app: 'brave', title: 'Ask HN: burnout - Hacker News - Brave' };
 
@@ -36,9 +38,10 @@ test('decider: sends one typed question with the state to /systemone, and nothin
     assert.equal(m.requests[0].url, '/v1/systemone');
     const b = m.requests[0].body;
     assert.equal(b.model, 'julia-1');
-    assert.deepEqual(b.state, { quest: 'Banafah verification', next_step: 'Add store hours', app: 'brave', window_title: sample.title, minutes_in_window: 6 });
+    assert.deepEqual(b.state, { quest: 'Banafah verification', next_step: 'Add store hours', app: 'brave', window_title: sample.title });
     assert.deepEqual(Object.keys(b.questions), ['fit']);
-    assert.deepEqual(b.questions.fit.criteria, DECIDER_QUESTION.fit.criteria);
+    assert.deepEqual(b.questions.fit.criteria, deciderQuestion('Banafah verification').fit.criteria);
+    assert.match(b.questions.fit.criteria.work, /Banafah verification/);
   } finally { await m.close(); }
 });
 
@@ -48,6 +51,7 @@ test('decider: below the confidence threshold it stays quiet (unsure)', async ()
     const r = await createDecider({ baseUrl: m.url, threshold: 0.75 }).judge({ quest, sample });
     assert.equal(r.verdict, 'unsure');
     assert.match(r.reason, /off-task p=0\.60/);
+    assert.equal(r.choice, 'off-task');
   } finally { await m.close(); }
 });
 

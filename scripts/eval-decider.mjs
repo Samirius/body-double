@@ -21,7 +21,7 @@ for (const c of cases) {
   const q = quests[c.quest];
   const r = await decider.judge({ quest: { title: q.title, tag: q.tag }, nextStep: { text: q.next_step }, sample: { app: c.app, title: c.title }, minutes: 6 });
   if (r.reason === 'local decider unavailable') { console.error(`no answer from ${baseUrl}: is the server running (npm run julia)?`); process.exit(1); }
-  rows.push({ ...c, choice: r.reason.split(' ')[0], p: r.probability, ms: r.ms });
+  rows.push({ ...c, choice: r.choice, p: r.probability, ms: r.ms });
 }
 
 const at = (t) => {
