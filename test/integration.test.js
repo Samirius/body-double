@@ -41,7 +41,7 @@ test('mcp: tools drive the background service end to end', { timeout: 60_000 }, 
   const dataDir = mkdtempSync(path.join(tmpdir(), 'bd-int-'));
   const nowFile = path.join(dataDir, 'NOW.md');
   writeFileSync(nowFile, NOW);
-  const env = { ...process.env, BD_DATA_DIR: dataDir, BD_PORT: String(47900 + Math.floor(Math.random() * 90)), BD_JARVIS_NOW: nowFile, BD_PROVIDER: 'none', BD_SAMPLE_SECONDS: '600', BD_NOTIFY: 'off' };
+  const env = { ...process.env, BD_DATA_DIR: dataDir, BD_PORT: String(47900 + Math.floor(Math.random() * 90)), BD_JARVIS_NOW: nowFile, BD_PROVIDER: 'none', BD_DECIDER: 'off', BD_SAMPLE_SECONDS: '600', BD_NOTIFY: 'off' };
   const client = new Client({ name: 'test', version: '0' });
   await client.connect(new StdioClientTransport({ command: process.execPath, args: ['src/mcp.js'], env }));
   const call = async (name, args = {}) => { const r = await client.callTool({ name, arguments: args }); assert.ok(!r.isError, r.content[0].text); return r.content[0].text; };

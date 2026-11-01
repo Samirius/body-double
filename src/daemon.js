@@ -13,6 +13,8 @@ import { notify } from './ui/notify.js';
 import { killTestReport } from './report.js';
 import { importFromFile } from './jarvis.js';
 import { buildStats, renderStatsHtml } from './stats.js';
+import { ensureDeciderServer } from './core/decider-server.js';
+import { fileURLToPath } from 'node:url';
 
 if (existsSync('.env')) process.loadEnvFile('.env');
 const env = process.env;
@@ -39,6 +41,15 @@ const ui = {
   },
   status(s) { broadcast('status', s); },
 };
+
+// Local decision model: started here so it runs whenever the service does.
+// BD_DECIDER picks it (kev-4b | kev | julia | off); an explicit BD_JUDGE wins.
+let decider = null;
+if (!env.BD_JUDGE && (env.BD_DECIDER || 'kev-4b') !== 'off') {
+  decider = await ensureDeciderServer({ root: path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..'), name: env.BD_DECIDER || 'kev-4b', log: (t, d) => console.log(t, d) });
+  if (decider) Object.assign(env, { BD_JUDGE: 'local', BD_DECIDER_URL: decider.url, BD_DECIDER_MODEL: decider.name });
+}
+process.on('exit', () => decider?.child?.kill());
 
 const { store, companion, modelLabel } = await createApp({ env, ui });
 const token = randomBytes(24).toString('hex');
