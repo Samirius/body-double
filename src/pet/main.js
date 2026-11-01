@@ -190,10 +190,10 @@ async function selftest() {
     await wait(1500);
     await shot(pet, '1-pet-cheer');
     // Demo clip: a drift nudge types itself out, then the real Done button.
-    await clip('nudge', 8, async () => {
+    await clip('nudge', 13, async () => {
       if (!RECORD) return;
       await client.call('POST', '/debug/emit', { type: 'nudge', message: 'Quick check: "Banafah verification"?', nextAction: 'Upload storefront photo' });
-      await wait(3500);
+      await wait(9500); // the narration describes the bubble for ~9 s
       await pet.webContents.executeJavaScript("document.getElementById('b-done').click()");
     });
     await client.call('POST', '/debug/emit', { type: 'nudge', message: 'Quick check: "Banafah verification"?', nextAction: 'Upload storefront photo' });
