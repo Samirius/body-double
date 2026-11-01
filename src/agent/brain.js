@@ -9,7 +9,7 @@
 // quest. It does see the window title (and optionally a screenshot), because
 // that is the whole question; see createJudge for the privacy switch.
 import { Agent } from '@earendil-works/pi-agent-core';
-import { createModels, Type } from '@earendil-works/pi-ai';
+import { createModels, createProvider, Type } from '@earendil-works/pi-ai';
 
 export const SYSTEM_PROMPT = `You are a calm, warm focus companion for someone with ADHD. You speak first.
 Rules for every message:
@@ -21,7 +21,7 @@ Rules for every message:
 Always respond by calling a tool: nudge, or split_step followed by nudge.`;
 
 export async function createModelFromEnv(env = process.env) {
-  const provider = (env.BD_PROVIDER || (env.META_API_KEY ? 'meta' : env.ZAI_API_KEY ? 'zai' : 'none')).toLowerCase();
+  const provider = (env.BD_PROVIDER || (env.META_API_KEY ? 'meta' : env.ZAI_API_KEY ? 'zai' : env.BD_LLAMA_URL ? 'llama' : 'none')).toLowerCase();
   if (provider === 'none') return null;
   const models = createModels();
   if (provider === 'meta') {
@@ -34,7 +34,40 @@ export async function createModelFromEnv(env = process.env) {
     models.setProvider(zaiProvider());
     return { models, model: models.getModel('zai', env.BD_MODEL || 'glm-5.3') };
   }
-  throw new Error(`Unknown BD_PROVIDER: ${provider} (use meta, zai or none)`);
+  if (provider === 'llama') return createLlamaHandle(env.BD_LLAMA_URL);
+  throw new Error(`Unknown BD_PROVIDER: ${provider} (use meta, zai, llama or none)`);
+}
+
+// Meta's Llama on this PC (llama.cpp's OpenAI-compatible server, started by
+// the service; see core/decider-server.js). No key, no credits, nothing leaves
+// the machine.
+export async function createLlamaHandle(baseUrl = 'http://127.0.0.1:18091/v1') {
+  const { openAICompletionsApi } = await import('@earendil-works/pi-ai/api/openai-completions.lazy');
+  const model = {
+    id: 'llama-3.2-3b', name: 'Llama 3.2 3B (on this PC)', api: 'openai-completions', provider: 'llama-local', baseUrl,
+    reasoning: false, input: ['text'], cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 },
+    compat: { supportsStore: false, supportsDeveloperRole: false, supportsReasoningEffort: false, maxTokensField: 'max_tokens', supportsStrictMode: false },
+    contextWindow: 8192, maxTokens: 400, type: 'chat',
+  };
+  const models = createModels();
+  models.setProvider(createProvider({
+    id: 'llama-local', name: 'Llama (on this PC)', baseUrl,
+    // llama.cpp ignores the key unless started with --api-key.
+    auth: { apiKey: { name: 'local', resolve: async () => ({ auth: { apiKey: 'local' } }) } },
+    models: [model], api: openAICompletionsApi(),
+  }));
+  return { models, model, local: true };
+}
+
+// Which models write nudges, in order: the configured one (Muse Spark with a
+// Meta key), then Llama on this PC when it runs. A failed call (no credits,
+// offline) falls through to the next; templates are the last resort.
+export async function createModelChain(env = process.env) {
+  const chain = [];
+  const primary = await createModelFromEnv(env);
+  if (primary) chain.push(primary);
+  if (env.BD_LLAMA_URL && !primary?.local) chain.push(await createLlamaHandle(env.BD_LLAMA_URL));
+  return chain;
 }
 
 const mins = (s) => Math.max(1, Math.round(s / 60));
@@ -81,7 +114,7 @@ export function buildPrompt({ quest, nextStep, event, stats, now = new Date() })
 
 const median = (xs) => { const s = [...xs].sort((a, b) => a - b); return s[Math.floor(s.length / 2)]; };
 
-export function createBrain({ modelHandle = null, onNudge, onSplit, log = () => {} }) {
+export function createBrain({ modelHandle = null, modelHandles = modelHandle ? [modelHandle] : [], onNudge, onSplit, log = () => {} }) {
   const tools = [
     {
       name: 'nudge', label: 'Nudge',
@@ -98,22 +131,25 @@ export function createBrain({ modelHandle = null, onNudge, onSplit, log = () => 
   ];
 
   return {
-    hasModel: !!modelHandle,
+    hasModel: modelHandles.length > 0,
     async handle({ quest, nextStep, event, stats }) {
-      if (!modelHandle) return onNudge(templateNudge({ quest, nextStep, event }), 'template');
-      let nudged = false;
-      const agent = new Agent({
-        initialState: { systemPrompt: SYSTEM_PROMPT, model: modelHandle.model, tools: tools.map((t) => (t.name === 'nudge' ? { ...t, execute: async (...a) => { nudged = true; return t.execute(...a); } } : t)) },
-        streamFn: modelHandle.models.streamSimple.bind(modelHandle.models),
-        identity: { attribution: null },
-      });
-      try {
-        await agent.prompt(buildPrompt({ quest, nextStep, event, stats }));
-        if (agent.state.errorMessage) throw new Error(agent.state.errorMessage);
-      } catch (e) {
-        log('model-error', { error: String(e.message || e).slice(0, 200) });
+      if (!modelHandles.length) return onNudge(templateNudge({ quest, nextStep, event }), 'template');
+      for (const handle of modelHandles) {
+        let nudged = false;
+        const agent = new Agent({
+          initialState: { systemPrompt: SYSTEM_PROMPT, model: handle.model, tools: tools.map((t) => (t.name === 'nudge' ? { ...t, execute: async (_id, p) => { nudged = true; await onNudge(p, `model:${handle.model.id}`); return { content: [{ type: 'text', text: 'shown' }], details: p, terminate: true }; } } : t)) },
+          streamFn: handle.models.streamSimple.bind(handle.models),
+          identity: { attribution: null },
+        });
+        try {
+          await agent.prompt(buildPrompt({ quest, nextStep, event, stats }));
+          if (agent.state.errorMessage) throw new Error(agent.state.errorMessage);
+        } catch (e) {
+          log('model-error', { model: handle.model.id, error: String(e.message || e).slice(0, 200) });
+        }
+        if (nudged) return;
       }
-      if (!nudged) await onNudge(templateNudge({ quest, nextStep, event }), 'template-fallback');
+      await onNudge(templateNudge({ quest, nextStep, event }), 'template-fallback');
     },
   };
 }

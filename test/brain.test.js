@@ -1,7 +1,8 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { createModels, fauxProvider, fauxAssistantMessage, fauxToolCall, fauxText } from '@earendil-works/pi-ai';
-import { createBrain, buildPrompt } from '../src/agent/brain.js';
+import http from 'node:http';
+import { createBrain, buildPrompt, createLlamaHandle } from '../src/agent/brain.js';
 
 const quest = { title: 'Banafah verification', tag: 'Client Work', deadline: '2026-11-06' };
 const nextStep = { id: 's1', text: 'Write the store hours in Merchant Center' };
@@ -34,7 +35,7 @@ test('brain: model splits a big step, then nudges toward the first tiny one', as
   const brain = createBrain({ modelHandle: h, onNudge: async (n, src) => shown.push({ ...n, src }), onSplit: async (s) => splits.push(s) });
   await brain.handle({ quest, nextStep, event, stats });
   assert.deepEqual(splits[0], ['Open Merchant Center', 'Click Business info', 'Paste the hours']);
-  assert.deepEqual(shown, [{ message: 'Banafah first.', nextAction: 'Open Merchant Center', src: 'model' }]);
+  assert.deepEqual(shown, [{ message: 'Banafah first.', nextAction: 'Open Merchant Center', src: `model:${h.model.id}` }]);
 });
 
 test('brain: a model that answers in plain text still produces a template nudge', async () => {
@@ -60,4 +61,39 @@ test('brain: with no active quest the template asks for one thing instead of "yo
   assert.match(shown[0].message, /No quest yet/);
   assert.match(shown[0].nextAction, /Pick one thing/);
   assert.doesNotMatch(shown[0].message, /your quest/);
+});
+
+test('brain: when the first model gives no nudge (no credits, offline), the next one writes it', async () => {
+  const broke = fauxHandle([fauxAssistantMessage([fauxText('...')])]);
+  const backup = fauxHandle([fauxAssistantMessage([fauxToolCall('nudge', { message: 'Back to Banafah.', nextAction: 'Open Merchant Center' })], { stopReason: 'toolUse' })]);
+  const shown = [];
+  const brain = createBrain({ modelHandles: [broke, backup], onNudge: async (n, src) => shown.push({ ...n, src }), onSplit: async () => {} });
+  await brain.handle({ quest, nextStep, event, stats });
+  assert.deepEqual(shown, [{ message: 'Back to Banafah.', nextAction: 'Open Merchant Center', src: `model:${backup.model.id}` }]);
+});
+
+test('brain: Llama on this PC is driven over the OpenAI-compatible API with the nudge tool', async () => {
+  const seen = [];
+  const srv = http.createServer((req, res) => {
+    let body = '';
+    req.on('data', (d) => { body += d; }).on('end', () => {
+      seen.push({ url: req.url, body: JSON.parse(body) });
+      res.writeHead(200, { 'content-type': 'text/event-stream' });
+      const chunk = (o) => res.write(`data: ${JSON.stringify(o)}\n\n`);
+      chunk({ id: 'c1', object: 'chat.completion.chunk', model: 'llama-3.2-3b', choices: [{ index: 0, delta: { role: 'assistant', tool_calls: [{ index: 0, id: 'call_1', type: 'function', function: { name: 'nudge', arguments: JSON.stringify({ message: 'Banafah is waiting.', nextAction: 'Open Merchant Center' }) } }] }, finish_reason: null }] });
+      chunk({ id: 'c1', object: 'chat.completion.chunk', model: 'llama-3.2-3b', choices: [{ index: 0, delta: {}, finish_reason: 'tool_calls' }] });
+      res.end('data: [DONE]\n\n');
+    });
+  });
+  await new Promise((r) => srv.listen(0, '127.0.0.1', r));
+  try {
+    const h = await createLlamaHandle(`http://127.0.0.1:${srv.address().port}/v1`);
+    const shown = [];
+    const brain = createBrain({ modelHandles: [h], onNudge: async (n, src) => shown.push({ ...n, src }), onSplit: async () => {} });
+    await brain.handle({ quest, nextStep, event, stats });
+    assert.deepEqual(shown, [{ message: 'Banafah is waiting.', nextAction: 'Open Merchant Center', src: 'model:llama-3.2-3b' }]);
+    assert.equal(seen[0].url, '/v1/chat/completions');
+    assert.equal(seen[0].body.model, 'llama-3.2-3b');
+    assert.deepEqual(seen[0].body.tools.map((t) => t.function.name).sort(), ['nudge', 'split_step']);
+  } finally { srv.close(); }
 });

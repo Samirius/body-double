@@ -2,7 +2,7 @@
 // one store, one model handle, one companion loop.
 import { createStore } from './core/store.js';
 import { createWatcher } from './core/watcher.js';
-import { createBrain, createJudge, createModelFromEnv } from './agent/brain.js';
+import { createBrain, createJudge, createModelChain } from './agent/brain.js';
 import { captureScreen } from './core/screenshot.js';
 import { createDecider } from './agent/decider.js';
 import { createCompanion } from './companion.js';
@@ -11,8 +11,10 @@ export async function createApp({ env = process.env, ui, log = console.log }) {
   const store = createStore(env.BD_DATA_DIR || undefined, { debounceMs: Number(env.BD_SAVE_MS ?? 2000) });
   // Batched saves must never be lost on exit.
   process.on('exit', () => store.flush());
-  let modelHandle = null;
-  try { modelHandle = await createModelFromEnv(env); } catch (e) { log(`model setup failed, using templates: ${e.message}`); }
+  // Nudge writers in order (Muse Spark with a Meta key, then Llama on this PC).
+  let modelHandles = [];
+  try { modelHandles = await createModelChain(env); } catch (e) { log(`model setup failed, using templates: ${e.message}`); }
+  const modelHandle = modelHandles[0] || null;
   // BD_JUDGE: local (a decision model on this PC, see agent/decider.js; the
   // default when BD_DECIDER_URL is set) | title | screenshot | off.
   const judgeMode = (env.BD_JUDGE || (env.BD_DECIDER_URL ? 'local' : 'title')).toLowerCase();
@@ -23,12 +25,12 @@ export async function createApp({ env = process.env, ui, log = console.log }) {
   const timing = Object.fromEntries(Object.entries({ unclearMinutes: num(env.BD_UNCLEAR_MINUTES), stuckMinutes: num(env.BD_STUCK_MINUTES), morningHour: num(env.BD_MORNING_HOUR), eveningHour: num(env.BD_EVENING_HOUR) }).filter(([, v]) => v !== undefined));
   const companion = createCompanion({
     store, watcher: createWatcher({ onRestart: (n) => store.log('watcher-restart', { n }) }), ui, judge, captureScreen,
-    makeBrain: (callbacks) => createBrain({ modelHandle, ...callbacks }),
+    makeBrain: (callbacks) => createBrain({ modelHandles, ...callbacks }),
     driftOptions: num(env.BD_DRIFT_SECONDS) ? { driftAfterSeconds: num(env.BD_DRIFT_SECONDS) } : {},
     timing,
     sampleEverySeconds: num(env.BD_SAMPLE_SECONDS) || 15,
   });
-  return { store, companion, modelHandle, judgeMode: judge.mode, modelLabel: modelHandle ? `${modelHandle.model?.provider}/${modelHandle.model?.id}` : 'templates (no model key)' };
+  return { store, companion, modelHandle, judgeMode: judge.mode, modelLabel: modelHandles.length ? modelHandles.map((h) => `${h.model?.provider}/${h.model?.id}`).join(' -> ') : 'templates (no model)' };
 }
 
 // Find a quest by id or by a case-insensitive fragment of its title.

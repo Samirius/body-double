@@ -11,7 +11,7 @@ import { createRequire } from 'node:module';
 const electron = createRequire(import.meta.url)('electron');
 const out = path.resolve(process.argv[2] || mkdtempSync(path.join(tmpdir(), 'bd-pet-shots-')));
 const dataDir = mkdtempSync(path.join(tmpdir(), 'bd-pet-data-'));
-const env = { ...process.env, BD_DATA_DIR: dataDir, BD_PORT: String(48100 + Math.floor(Math.random() * 400)), BD_NOTIFY: 'off', BD_PROVIDER: 'none', BD_DECIDER: 'off', BD_SAMPLE_SECONDS: '600', BD_DEBUG: '1' };
+const env = { ...process.env, BD_DATA_DIR: dataDir, BD_PORT: String(48100 + Math.floor(Math.random() * 400)), BD_NOTIFY: 'off', BD_PROVIDER: 'none', BD_DECIDER: 'off', BD_WRITER: 'off', BD_SAMPLE_SECONDS: '600', BD_DEBUG: '1' };
 const r = spawnSync(electron, ['src/pet/main.js', '--selftest', out], { env, timeout: 120_000, stdio: 'inherit' });
 const report = JSON.parse(readFileSync(path.join(out, 'report.json'), 'utf8'));
 const shots = ['1-pet-cheer', '2-pet-nudge', '3-pet-sleep', '4-panel', '5-panel-after-add', '6-pet-ring'].map((n) => ({ n, bytes: statSync(path.join(out, `${n}.png`)).size }));

@@ -13,13 +13,16 @@ import { notify } from './ui/notify.js';
 import { killTestReport } from './report.js';
 import { importFromFile } from './jarvis.js';
 import { buildStats, renderStatsHtml } from './stats.js';
-import { ensureDeciderServer } from './core/decider-server.js';
+import { ensureDeciderServer, ensureWriterServer } from './core/decider-server.js';
 import { fileURLToPath } from 'node:url';
 
 if (existsSync('.env')) process.loadEnvFile('.env');
 const env = process.env;
 const PORT = Number(env.BD_PORT) || 47821;
-const JARVIS_NOW = env.BD_JARVIS_NOW || 'D:\\Samir-Second-Brain\\work\\NOW.generated.md';
+// Kev-0.8B by default: a 14 GB PC also runs Llama 3B and everything else.
+// Kev-4B (BD_DECIDER=kev-4b) only if the eval shows it earns its 3 GB.
+const DEFAULT_DECIDER = 'kev';
+const JARVIS_NOW =env.BD_JARVIS_NOW || 'D:\\Samir-Second-Brain\\work\\NOW.generated.md';
 
 // Server-sent events: the pet (or anything local) subscribes to /events.
 const listeners = new Set();
@@ -42,14 +45,21 @@ const ui = {
   status(s) { broadcast('status', s); },
 };
 
-// Local decision model: started here so it runs whenever the service does.
-// BD_DECIDER picks it (kev-4b | kev | julia | off); an explicit BD_JUDGE wins.
-let decider = null;
-if (!env.BD_JUDGE && (env.BD_DECIDER || 'kev-4b') !== 'off') {
-  decider = await ensureDeciderServer({ root: path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..'), name: env.BD_DECIDER || 'kev-4b', log: (t, d) => console.log(t, d) });
+// Local models: started here so they run whenever the service does.
+// BD_DECIDER picks the decision model (kev | kev-4b | julia | off; an explicit
+// BD_JUDGE wins). BD_WRITER=off skips Llama; a Meta key still goes first.
+const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
+const serverLog = (t, d) => console.log(t, d);
+let decider = null, writer = null;
+if (!env.BD_JUDGE && (env.BD_DECIDER || DEFAULT_DECIDER) !== 'off') {
+  decider = await ensureDeciderServer({ root: ROOT, name: env.BD_DECIDER || DEFAULT_DECIDER, log: serverLog });
   if (decider) Object.assign(env, { BD_JUDGE: 'local', BD_DECIDER_URL: decider.url, BD_DECIDER_MODEL: decider.name });
 }
-process.on('exit', () => decider?.child?.kill());
+if (!env.BD_LLAMA_URL && env.BD_WRITER !== 'off') {
+  writer = await ensureWriterServer({ root: ROOT, log: serverLog });
+  if (writer) env.BD_LLAMA_URL = writer.url;
+}
+process.on('exit', () => { decider?.child?.kill(); writer?.child?.kill(); });
 
 const { store, companion, modelLabel } = await createApp({ env, ui });
 const token = randomBytes(24).toString('hex');
