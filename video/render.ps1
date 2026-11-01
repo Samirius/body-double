@@ -21,6 +21,21 @@ foreach ($m in $manifest) {
     $synth.SetOutputToNull()
   }
   $dur = [double](& ffprobe -v error -show_entries format=duration -of csv=p=0 $wav)
+  # The Nudgling's own robot sounds under the narration, each at its moment.
+  if ($m.sfx -and @($m.sfx).Count -gt 0) {
+    $inputs = @('-i', $wav); $chains = @(); $labels = '[0:a]'; $k = 0
+    foreach ($s in @($m.sfx)) {
+      $k++; $inputs += @('-i', $s.file)
+      $ms = [int]([double]$s.at * 1000)
+      $chains += "[$($k):a]adelay=$($ms)|$($ms),volume=0.7[s$k]"; $labels += "[s$k]"
+    }
+    $mixed = Join-Path $Dir "mix$($m.n).wav"
+    $graph = ($chains -join ';') + ";$($labels)amix=inputs=$($k + 1):duration=longest:normalize=0[a]"
+    & ffmpeg -y -v error @inputs -filter_complex $graph -map '[a]' -ar 48000 $mixed
+    if ($LASTEXITCODE -ne 0) { throw "ffmpeg sfx mix failed on $($m.n)" }
+    $wav = $mixed
+    $dur = [math]::Max($dur, [double](& ffprobe -v error -show_entries format=duration -of csv=p=0 $wav) - 0.6)
+  }
   $pad = if ($m.last) { 0.9 } else { 0.25 }
   $len = [math]::Round($dur + $pad, 2)
   $seg = Join-Path $Dir "seg$($m.n).mp4"

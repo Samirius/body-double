@@ -9,4 +9,8 @@ contextBridge.exposeInMainWorld('bd', {
   onRefresh: (fn) => ipcRenderer.on('bd:refresh', () => fn()),
   setInteractive: (on) => ipcRenderer.send('bd:interactive', !!on),
   setTyping: (on) => ipcRenderer.send('bd:typing', !!on),
+  // Full-screen effects: the pet asks for one, the fx window plays it and reports done.
+  fx: (payload) => ipcRenderer.send('bd:fx', payload),
+  onFx: (fn) => ipcRenderer.on('bd:fx', (_e, p) => fn(p)),
+  fxDone: () => ipcRenderer.send('bd:fx-done'),
 });

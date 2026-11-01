@@ -1,0 +1,16 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><title>sounds</title></head>
+<body>
+<script type="module">
+// Renders each robot sound offline; render-sounds.mjs reads the samples.
+import { SOUNDS, useAudioContext } from '../src/pet/voice.js';
+window.renderSound = async (name) => {
+  const ctx = new OfflineAudioContext(1, 48000 * 1.6, 48000);
+  useAudioContext(ctx);
+  SOUNDS[name]();
+  const buf = await ctx.startRendering();
+  return Array.from(buf.getChannelData(0));
+};
+window.soundNames = Object.keys(SOUNDS);
+</script>
+</body></html>

@@ -26,7 +26,7 @@ const STRIP_HEIGHT = 330; // room for the transmission bubble above the pet
 if (!SELFTEST_DIR && !app.requestSingleInstanceLock()) app.quit();
 
 const client = createClient({ env: process.env, nodePath: process.execPath });
-let pet = null, panel = null, tray = null, unsubscribe = null, connected = false;
+let pet = null, panel = null, fx = null, tray = null, unsubscribe = null, connected = false;
 const send = (channel, payload) => { for (const w of [pet, panel]) if (w && !w.isDestroyed()) w.webContents.send(channel, payload); };
 
 function createPet() {
@@ -35,12 +35,30 @@ function createPet() {
     x: area.x, y: area.y + area.height - STRIP_HEIGHT, width: area.width, height: STRIP_HEIGHT,
     transparent: true, frame: false, resizable: false, movable: false, hasShadow: false, skipTaskbar: true,
     focusable: false, alwaysOnTop: true, backgroundColor: '#00000000', show: false,
-    webPreferences: { preload: path.join(here, 'preload.cjs'), contextIsolation: true, sandbox: true, nodeIntegration: false },
+    // Its little robot sounds play without a click first.
+    webPreferences: { preload: path.join(here, 'preload.cjs'), contextIsolation: true, sandbox: true, nodeIntegration: false, autoplayPolicy: 'no-user-gesture-required' },
   });
   pet.setAlwaysOnTop(true, 'floating');
   pet.setIgnoreMouseEvents(true, { forward: true });
-  pet.loadFile(path.join(here, 'pet.html'), RECORD ? { query: { hold: '1' } } : {});
+  // The self-test stays silent; recording also holds the creature in place.
+  pet.loadFile(path.join(here, 'pet.html'), { query: { ...(RECORD ? { hold: '1' } : {}), ...(SELFTEST_DIR ? { quiet: '1' } : {}) } });
   pet.once('ready-to-show', () => pet.showInactive());
+}
+
+// Full-screen effects (bomb, rage text, confetti): a transparent window over
+// the work area that never takes clicks or focus and is shown only while an
+// effect plays.
+function createFx() {
+  const area = screen.getPrimaryDisplay().workArea;
+  fx = new BrowserWindow({
+    x: area.x, y: area.y, width: area.width, height: area.height,
+    transparent: true, frame: false, resizable: false, movable: false, hasShadow: false, skipTaskbar: true,
+    focusable: false, alwaysOnTop: true, backgroundColor: '#00000000', show: false,
+    webPreferences: { preload: path.join(here, 'preload.cjs'), contextIsolation: true, sandbox: true, nodeIntegration: false, autoplayPolicy: 'no-user-gesture-required' },
+  });
+  fx.setAlwaysOnTop(true, 'screen-saver');
+  fx.setIgnoreMouseEvents(true);
+  fx.loadFile(path.join(here, 'fx.html'));
 }
 
 function createPanel() {
@@ -127,6 +145,14 @@ async function act(name, payload = {}) {
 ipcMain.handle('bd:act', async (_e, name, payload) => {
   try { return { ok: true, data: await act(name, payload) }; } catch (e) { return { ok: false, error: String(e.message || e) }; }
 });
+const FX_KINDS = new Set(['bomb', 'rage', 'confetti']);
+ipcMain.on('bd:fx', (_e, p) => {
+  if (!fx || fx.isDestroyed() || !FX_KINDS.has(p?.kind)) return;
+  // The strip and this window share the work area's x, so the bomb starts at the creature.
+  fx.showInactive();
+  fx.webContents.send('bd:fx', { kind: p.kind, text: String(p.text || '').slice(0, 60), sub: String(p.sub || '').slice(0, 90), x: Number(p.x) || null, sound: !!p.sound });
+});
+ipcMain.on('bd:fx-done', () => { if (fx && !fx.isDestroyed()) fx.hide(); });
 ipcMain.on('bd:interactive', (_e, on) => { if (pet && !pet.isDestroyed()) pet.setIgnoreMouseEvents(!on, { forward: true }); });
 // The strip never takes focus (it must not steal typing), except while its
 // question field is open.
@@ -140,18 +166,28 @@ async function selftest() {
   const step = (k, v) => report.steps.push({ [k]: v });
   // Frame sequence of the right-hand 640 px (bubble + creature) at ~15 fps while
   // `during` runs, then until `seconds` have passed. Off unless --record.
-  const clip = async (name, seconds, during = async () => {}) => {
+  // With { win: fx }: the whole effects window, halved.
+  const clip = async (name, seconds, during = async () => {}, { win = pet } = {}) => {
     if (!RECORD) return during();
     const dir = path.join(SELFTEST_DIR, 'clips', name);
     mkdirSync(dir, { recursive: true });
-    const { width, height } = pet.getContentBounds();
-    const rect = { x: width - 640, y: 0, width: 640, height };
+    const { width, height } = win.getContentBounds();
+    const rect = win === pet ? { x: width - 640, y: 0, width: 640, height } : { x: 0, y: 0, width, height };
+    // A hidden window never paints, so capturing it would wait forever: blank frame instead.
+    const blank = win === pet ? null : nativeImage.createFromBitmap(Buffer.alloc(Math.round(width / 2) * Math.round(height / 2) * 4), { width: Math.round(width / 2), height: Math.round(height / 2) }).toPNG();
+    const grab = async () => {
+      if (blank && !win.isVisible()) return blank;
+      // It can also hide mid-capture: give up after a second.
+      const img = await Promise.race([win.webContents.capturePage(rect), wait(1000).then(() => null)]);
+      if (!img) return blank;
+      return (win === pet ? img : img.resize({ width: Math.round(width / 2), height: Math.round(height / 2) })).toPNG();
+    };
     let n = 0, recording = true;
     const started = Date.now();
     const loop = (async () => {
       while (recording || Date.now() - started < seconds * 1000) {
         const t0 = Date.now();
-        writeFileSync(path.join(dir, `${String(n++).padStart(4, '0')}.png`), (await pet.webContents.capturePage(rect)).toPNG());
+        writeFileSync(path.join(dir, `${String(n++).padStart(4, '0')}.png`), await grab());
         await wait(Math.max(0, 66 - (Date.now() - t0)));
       }
     })();
@@ -223,6 +259,33 @@ async function selftest() {
     await pet.webContents.executeJavaScript("document.querySelector('#bubble').style.display = 'none'; 0");
     await wait(600);
     await shot(pet, '6-pet-ring');
+    // Feelings: the 3rd nudge of one drift throws a bomb across the screen,
+    // the 3rd snooze within an hour gets the big "I'M NOT MAD".
+    const fxVisible = () => fx.isVisible();
+    await clip('fx', 7, async () => {
+      for (let i = 0; i < 3 && !fxVisible(); i++) {
+        await client.call('POST', '/debug/emit', { type: 'nudge', message: 'Still drifting. "Banafah verification" is waiting.', nextAction: 'Upload storefront photo' });
+        await wait(700);
+      }
+      if (!fxVisible()) throw new Error('3rd drift nudge did not throw the bomb');
+      await wait(1900); // mid-explosion
+      await shot(fx, '7-fx-bomb');
+      for (let i = 0; i < 40 && fxVisible(); i++) await wait(150);
+    }, { win: fx });
+    step('fx-bomb', true);
+    await clip('fx-rage', 4, async () => {
+      for (let i = 0; i < 3 && !fxVisible(); i++) {
+        await client.call('POST', '/pause', { paused: true, minutes: 10 });
+        await wait(400);
+        await client.call('POST', '/pause', { paused: false });
+        await wait(400);
+      }
+      if (!fxVisible()) throw new Error('3rd snooze did not show the rage text');
+      await wait(900);
+      await shot(fx, '8-fx-rage');
+      for (let i = 0; i < 40 && fxVisible(); i++) await wait(150);
+    }, { win: fx });
+    step('fx-rage', true);
     panel.show(); panel.webContents.send('bd:refresh');
     await wait(1500);
     await shot(panel, '4-panel');
@@ -252,6 +315,7 @@ async function selftest() {
 app.whenReady().then(() => {
   createPet();
   createPanel();
+  createFx();
   if (!SELFTEST_DIR) {
     createTray();
     globalShortcut.register('Control+Alt+D', () => act('done').catch(() => {}));

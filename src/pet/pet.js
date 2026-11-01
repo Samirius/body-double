@@ -3,6 +3,9 @@
 import { buildFrame, SIZE, STAGE_GLOW } from './sprites.js';
 import { petStage } from '../core/game.js';
 import { decidePose, createWanderer } from './behaviour.js';
+import { createFeelings } from './feelings.js';
+import { drawEmote, EMOTES } from './emotes.js';
+import { play } from './voice.js';
 
 const SCALE = 4, SPR = SIZE * SCALE, GROUND = 6, BUBBLE_W = 340;
 const canvas = document.getElementById('stage');
@@ -14,6 +17,33 @@ const state = { label: null, paused: false, stage: 1, cheerUntil: 0, bubbleUntil
 const wander = createWanderer({ width: () => innerWidth, sprite: SPR });
 // Recording the demo clips: stay in one spot so the crop keeps the creature.
 const HOLD = new URLSearchParams(location.search).has('hold');
+const QUIET = new URLSearchParams(location.search).has('quiet'); // self-test: no sound
+
+// --- feelings: emotes, robot sounds, full-screen effects ---------------------
+// SOUND and FX are switches in the creature's menu, remembered on this PC.
+const pref = (k, d) => { try { const v = localStorage.getItem(`bd.${k}`); return v == null ? d : v === '1'; } catch { return d; } };
+const setPref = (k, v) => { try { localStorage.setItem(`bd.${k}`, v ? '1' : '0'); } catch { /* not remembered */ } };
+const prefs = { sound: pref('sound', true), fx: pref('fx', true) };
+const feelings = createFeelings();
+function react(r) {
+  if (!r) return;
+  if (r.emote) state.emote = { name: r.emote, until: performance.now() + 2800 };
+  // Nothing loud while paused (a meeting, a snooze).
+  const sound = prefs.sound && !QUIET && !state.paused;
+  if (r.voice && sound) play(r.voice);
+  if (r.fx && prefs.fx && !state.paused) window.bd.fx({ ...r.fx, x: wander.x() + SPR / 2, sound });
+}
+function drawFeeling(now) {
+  const e = state.emote;
+  if (!e || now > e.until || !EMOTES[e.name]) return;
+  // By the head, on the side with room; a small hop when it appears.
+  const px = 4, w = EMOTES[e.name][0].length * px;
+  const left = wander.x() + SPR - 6 + w > innerWidth;
+  const x = left ? wander.x() - w + 6 : wander.x() + SPR - 6;
+  const age = (now - (e.until - 2800)) / 1000;
+  const y = canvas.height - SPR - GROUND + 26 - Math.max(0, 8 - age * 40) - Math.sin(age * 6) * 2;
+  drawEmote(ctx, e.name, x, y, px);
+}
 
 function resize() { canvas.width = innerWidth; canvas.height = innerHeight; ctx.imageSmoothingEnabled = false; }
 addEventListener('resize', resize);
@@ -44,6 +74,9 @@ function loop(now) {
   wander.step(dt, { canMove: !HOLD && (pose === 'idle' || pose === 'walk' || pose === 'worry') });
   ctx.clearRect(0, 0, canvas.width, canvas.height);
   draw(buildFrame({ state: pose, t, stage: state.stage, facing: wander.facing() }), wander.x(), canvas.height - SPR - GROUND);
+  drawFeeling(now);
+  // Walking right up to the screen edge: "whoaaa".
+  if (wander.moving() && (wander.x() <= 30 || wander.x() >= innerWidth - SPR - 30)) react(feelings.edge());
   drawRing(Date.now());
   if (talking) placeBubble();
   if (menu.style.display === 'flex') placeMenu();
@@ -88,6 +121,10 @@ menu.querySelectorAll('button[data-min]').forEach((b) => { b.onclick = async () 
 $('m-stop').onclick = async () => { toggleMenu(false); await act('session', { action: 'stop' }); refreshStatus(); };
 $('m-hud').onclick = () => { toggleMenu(false); act('panel'); };
 $('m-quest').onclick = () => { toggleMenu(false); askQuest(); };
+const showPrefs = () => { $('m-sound').textContent = `SOUND ${prefs.sound ? 'ON' : 'OFF'}`; $('m-fx').textContent = `FX ${prefs.fx ? 'ON' : 'OFF'}`; };
+$('m-sound').onclick = () => { prefs.sound = !prefs.sound; setPref('sound', prefs.sound); showPrefs(); if (prefs.sound && !QUIET) play('happy'); };
+$('m-fx').onclick = () => { prefs.fx = !prefs.fx; setPref('fx', prefs.fx); showPrefs(); };
+showPrefs();
 
 // --- transmission bubble ---------------------------------------------------
 const KIND = {
@@ -144,6 +181,7 @@ function hideBubble() { bubble.style.display = 'none'; state.bubbleUntil = 0; cl
 // --- the question: "what are you working on?" (first run, or QUEST in the menu)
 function askQuest() {
   showBubble({ message: 'What are you working on right now?', nextAction: 'One thing. I\'ll split it into tiny steps.', kind: 'ask' });
+  react(feelings.nudge('ask'));
   $('ask-in').value = '';
   setTimeout(() => $('ask-in').focus(), 50);
 }
@@ -167,7 +205,7 @@ $('b-snooze').onclick = async () => { hideBubble(); await act('snooze', { minute
 $('b-park').onclick = async () => {
   hideBubble();
   const r = await act('park');
-  if (r.ok) floater('PARKED // IN VAULT', 'warn');
+  if (r.ok) { floater('PARKED // IN VAULT', 'warn'); react(feelings.park()); }
 };
 $('b-wrong').onclick = async () => {
   hideBubble();
@@ -226,21 +264,29 @@ async function refreshStatus() {
 window.bd.onConnection((s) => { state.connected = s === 'connected'; $('offline').style.display = state.connected ? 'none' : 'block'; if (state.connected) refreshStatus(); });
 window.bd.onEvent((ev) => {
   if (ev.type === 'hello') { state.paused = ev.status.paused; state.label = ev.status.label; state.stage = petStage(ev.status.level.level); applyGlow(); return; }
-  if (ev.type === 'status') { if ('session' in ev) state.session = ev.session; if (ev.label) state.label = ev.label; if (typeof ev.paused === 'boolean') state.paused = ev.paused; applyGlow(); return; }
-  if (ev.type === 'nudge') { showBubble(ev); return; }
+  if (ev.type === 'status') {
+    if ('session' in ev) state.session = ev.session;
+    if (ev.label) state.label = ev.label;
+    // A snooze (from the bubble, the HUD or Claude): a sigh, or on the 3rd in an hour, the big "I'M NOT MAD".
+    if (ev.paused === true && ev.pausedUntil && !state.paused) { state.paused = false; react(feelings.snooze()); }
+    if (typeof ev.paused === 'boolean') state.paused = ev.paused;
+    applyGlow();
+    return;
+  }
+  if (ev.type === 'nudge') { showBubble(ev); react(feelings.nudge(ev.kind || 'drift', { next: ev.nextAction })); return; }
   if (ev.type !== 'game' || !ev.game) return;
   const g = ev.game;
   const cheer = (ms) => { state.cheerUntil = Math.max(state.cheerUntil, performance.now() + ms); };
   switch (g.type) {
-    case 'xp': floater(`+${g.amount} XP // ${String(g.skill).toUpperCase()}`); cheer(1800); break;
+    case 'xp': floater(`+${g.amount} XP // ${String(g.skill).toUpperCase()}`); cheer(1800); react(feelings.done()); break;
     case 'comeback-bonus': floater('COMEBACK ×1.5', 'good'); break;
-    case 'level-up': floater(`LEVEL UP // ${String(g.level).padStart(2, '0')}`, 'big'); cheer(3000); break;
+    case 'level-up': floater(`LEVEL UP // ${String(g.level).padStart(2, '0')}`, 'big'); cheer(3000); react(feelings.celebrate('level-up', String(g.level).padStart(2, '0'))); break;
     case 'skill-up': floater(`${String(g.skill).toUpperCase()} → LV ${g.level}`, 'good'); break;
     case 'title': floater(`TITLE UNLOCKED // ${String(g.name).toUpperCase()}`, 'big'); cheer(2500); break;
-    case 'boss-defeated': floater('BOSS DOWN', 'big'); cheer(4000); break;
-    case 'pet-evolved': state.stage = g.stage; floater('NUDGLING EVOLVED', 'big'); cheer(4000); break;
+    case 'boss-defeated': floater('BOSS DOWN', 'big'); cheer(4000); react(feelings.celebrate('boss-defeated', g.quest || '')); break;
+    case 'pet-evolved': state.stage = g.stage; floater('NUDGLING EVOLVED', 'big'); cheer(4000); react(feelings.celebrate('pet-evolved')); break;
     case 'shield-used': floater('STREAK SHIELD USED', 'good'); break;
-    case 'returned': floater('BACK ON QUEST', 'good'); cheer(1500); hideBubble(); break;
+    case 'returned': floater('BACK ON QUEST', 'good'); cheer(1500); hideBubble(); react(feelings.returned()); break;
     case 'session-done': floater(`SESSION COMPLETE // ${g.minutes} MIN`, 'big'); cheer(3000); break;
     case 'parked': break; // the Park button already confirmed it
     default: break;

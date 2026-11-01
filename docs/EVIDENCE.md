@@ -3,13 +3,13 @@
 Everything here was measured on Samir's PC (Windows 10, AMD Ryzen 5 2400G, 14 GB RAM, CPU only). Raw files are
 in `eval/`. Where something failed, it says so.
 
-## 1. Automated tests: 68 pass
+## 1. Automated tests: 71 pass
 `npm test` covers the core rules, the brain and its model chain, learning from feedback, focus sessions, the
 vault, the local decision model, the background service end to end, and the pet's behaviour. No key or model is
 needed: models are replaced by pi-ai's faux provider or by a stand-in OpenAI-compatible server.
 
 `npm run test:pet` launches the real Electron app, drives it (a nudge, cheering, sleeping, the HUD, adding a
-quest, answering the first-run question, starting a focus session from the creature's own menu) and checks the eight screenshots. With `--record` it also saves the short clips used in the video. The images in
+quest, answering the first-run question, starting a focus session from the creature's own menu, the full-screen bomb and "not mad" effects) and checks the ten screenshots. With `--record` it also saves the short clips used in the video. The images in
 `docs/screens/` come from this run.
 
 ## 2. Soak test: 20 minutes, no leaks, no errors

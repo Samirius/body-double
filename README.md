@@ -23,6 +23,11 @@ ask tiny, and makes progress visible, because visible progress is what keeps you
   **Park it** (save the distraction for later), **Snooze**, **Wrong**.
 - **Learns you.** "Wrong" and "you missed it" teach it, per quest: YouTube can be research for one quest and a
   trap for another. It also tunes how long it waits before speaking (90–600 s).
+- **Feelings, no words.** Pixel emotes by its head ("!" when it notices, fire when ignored, a heart when you're
+  back) and tiny robot sounds made in code ("hm?", "urghh", "wee-oo", "whoaaa" at the screen edge). On the 3rd
+  nudge of one drift it throws a pixel bomb across the screen; on the 3rd snooze in an hour it says "I'M NOT
+  MAD." in giant glitch text; level-ups get confetti. Every effect lasts ~2 s, never takes a click, and the
+  creature's menu has **SOUND** and **FX** switches.
 - **Focus ring.** Click the creature → **FOCUS 25 / 50**. A ring counts down around it, then gives you a 5-minute
   break during which it stays quiet.
 - **Notices more than drift.** It offers a smaller step when you're stuck on one for 25 minutes. It opens your
@@ -60,8 +65,8 @@ in `.env`. Muse Spark then goes first and Llama becomes the backup. The HUD's AI
 
 Check it yourself:
 ```bash
-npm test               # 68 tests, no key and no model needed
-npm run test:pet       # launches the real app, drives it, saves 8 screenshots, checks them
+npm test               # 71 tests, no key and no model needed
+npm run test:pet       # launches the real app, drives it, saves 10 screenshots, checks them
 npm run eval:decider   # the local decision model on 40 labelled window titles
 ```
 
