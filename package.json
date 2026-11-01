@@ -13,10 +13,13 @@
     "stats": "node scripts/stats.mjs",
     "sprites": "node scripts/sprite-sheet.mjs docs/sprites.png 6",
     "video": "node video/build.mjs",
+    "setup:models": "node scripts/setup-models.mjs",
+    "icon": "node scripts/icon.mjs",
     "julia": "node scripts/julia.mjs",
     "kev": "node scripts/julia.mjs kev",
     "kev:4b": "node scripts/julia.mjs kev-4b",
     "eval:decider": "node scripts/eval-decider.mjs",
+    "eval:writer": "node scripts/eval-writer.mjs",
     "soak": "node scripts/soak.mjs"
   },
   "keywords": [],

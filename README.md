@@ -1,129 +1,124 @@
-# body-double (working name)
+# Nudgling — the body double that speaks first
 
-A proactive focus companion for ADHD brains, built on the [pi](https://github.com/earendil-works/pi) agent runtime.
+![Nudgling: the nudge bubble, the focus ring and the HUD, real screenshots](docs/hero.png)
 
-It notices when you drift, **speaks first** with **one next action you can do in under two minutes**, remembers
-what works for you, and turns finished work into a game: XP, levels, skills, titles, boss fights for deadlines,
-streaks that forgive a missed day. A pixel familiar lives on your screen and evolves as you level up.
+**Nudgling is a proactive focus companion for ADHD brains.** A small pixel creature lives on the bottom edge of
+your screen. When you drift, it speaks first, with **one next action you can do in under two minutes**. It
+learns from your feedback, and it turns finished work into a game: XP, levels, bosses, streaks that forgive.
+The creature evolves as you level up.
 
-![The familiar: six poses (idle, walk, talk, cheer, sleep, worry) across four evolution stages](docs/sprites.png)
+Built for the **Meta Global AI Developer Hackathon** (Indie · Build for Your World). Agent runtime:
+[pi](https://github.com/earendil-works/pi). Words come from **Meta's Muse Spark** in the cloud, or from **Meta's
+Llama 3.2 on your own PC**.
 
 ## Why
-Most focus tools wait for you to open them, which is exactly what an ADHD brain doesn't do. This one watches
-(privately), speaks up when you drift, keeps the ask tiny, and makes progress visible, because visible progress is
-what keeps going.
+I have ADHD. Every focus tool I've tried waits for me to open it, and that is exactly what an ADHD brain doesn't
+do. A *body double*, someone sitting next to you while you work, is one of the few things that reliably helps.
+Nudgling is a body double that is always there. It notices when you drift and starts the conversation, keeps the
+ask tiny, and makes progress visible, because visible progress is what keeps you going.
 
-## Quick start (Windows, Node 22+)
+## What it does
+- **Speaks first when you drift.** It watches which window is in front (titles are held in memory only). After a
+  few minutes on something unrelated, the bubble names your quest and one tiny next step. Buttons: **Done**,
+  **Park it** (save the distraction for later), **Snooze**, **Wrong**.
+- **Learns you.** "Wrong" and "you missed it" teach it, per quest: YouTube can be research for one quest and a
+  trap for another. It also tunes how long it waits before speaking (90–600 s).
+- **Focus ring.** Click the creature → **FOCUS 25 / 50**. A ring counts down around it, then gives you a 5-minute
+  break during which it stays quiet.
+- **Notices more than drift.** It offers a smaller step when you're stuck on one for 25 minutes. It opens your
+  day with a plan and closes it with what you won.
+- **Progress is the game.** XP only for finished steps (never for time, never from the model). Deadlines are
+  bosses with HP bars. Streak shields forgive a missed day. Titles, skills, and four evolution stages.
+- **Works from Claude.** An MCP server lets you say "I'm starting the Banafah verification, steps are …" or
+  "done with that" in any Claude chat, and Claude drives the companion.
+
+## Meta AI inside
+| Job | Model | Where it runs |
+|---|---|---|
+| Write the nudge, split a big step into tiny ones (pi agent with `nudge` / `split_step` tools) | **Muse Spark** (Meta Model API, via pi-ai's Meta provider) | Meta's cloud, when a key or Muse sign-in is set |
+| Same job, offline and free | **Llama 3.2 3B Instruct** (Meta) on llama.cpp | **this PC** (127.0.0.1) |
+| Decide whether an unclear window fits the quest | Kev-0.8B decision model (probabilities, no text) | this PC |
+
+The writers form a chain: Muse Spark → Llama on this PC → built-in templates. If one gives no nudge (no credits,
+offline), the next one writes it, so the companion never goes silent. With Llama, **nothing about your screen
+leaves the machine**. The model only gets abstract facts ("drifted 4 min from *Banafah verification*, next step
+*Upload storefront photo*").
+
+## Start it
+**On Samir's PC:** double-click **Nudgling** on the Desktop. It also starts by itself at login.
+
+**On a fresh Windows PC (Node 22+):**
 ```bash
 npm install
-npm test            # 54 tests, no API key needed
-npm run test:pet    # launches the real pet, drives it, saves 4 screenshots, checks them
-npm run pet         # the pixel familiar (starts the background service if needed)
+npm run setup:models    # llama.cpp + Kev-0.8B + Llama 3.2 3B from official sources, SHA-256 pinned (~3 GB)
+npm run pet             # the creature appears; it starts the service and both local models itself
+node scripts/autostart.mjs   # optional: start at login + Desktop icon (--remove undoes it)
 ```
-No model key is required: nudges fall back to templates. With a key, nudges are written by the model and long
-unclear stretches get judged (see Settings):
+Optional cloud model: put `META_API_KEY=...` in `.env` (Muse Spark goes first, Llama becomes the backup).
+
+Check it yourself:
+```bash
+npm test               # 63 tests, no key and no model needed
+npm run test:pet       # launches the real app, drives it, saves 6 screenshots, checks them
+npm run eval:decider   # the local decision model on 40 labelled window titles
 ```
-META_API_KEY=...            # Meta Model API (Muse Spark via pi-ai's Meta provider), or
-ZAI_API_KEY=...             # z.ai (GLM 5.3) with BD_PROVIDER=zai
-```
-
-## Three ways to use it
-- **Through Claude (no typing elsewhere).** Register the MCP server once: `node scripts/register-mcp.mjs`
-  (backs up `~/.claude.json`, adds one entry; `--remove` undoes it). Then say "I'm starting Banafah, steps are …",
-  "done with that", "that nudge was wrong", "how am I doing today?". Tools: `companion_status`, `companion_add_quest`,
-  `companion_complete_step`, `companion_activate_quest`, `companion_add_steps`, `companion_pause` (with minutes =
-  snooze), `companion_feedback`, `companion_rules`, `companion_forget_rule`, `companion_today`, `companion_stats`,
-  `companion_report`, `companion_import_jarvis`.
-- **The pet.** Lives along the bottom of the screen; clicks pass through everywhere except the pet and its bubble.
-  Nudges appear in a speech bubble with **Done ✓ / Snooze 10m / Wrong nudge**. Click the pet (or tray icon, or
-  Ctrl+Alt+B) for the panel: level, XP, active quest with boss HP and deadline, next step, streak, skills, titles,
-  nudge stats, quest switcher, JARVIS import, stats page. Hotkeys: Ctrl+Alt+D done, Ctrl+Alt+P pause.
-- **Terminal.** `npm start`: single-letter commands (`add`, `d`, `s`, `p`, `w`, `m`, `rules`, `forget`, `r`).
-
-## Optional, one command each (you run them; each backs up and has `--remove`)
-- `node scripts/autostart.mjs`: start the pet (and service) at Windows login (Startup-folder shortcut).
-- `node scripts/register-hook.mjs`: let it notice when a **Claude chat** drifts from your active quest. Each prompt is
-  judged once (needs a model key); off-topic chats get one gentle "park the idea" nudge at most every 30 min. The
-  hook never prints into the chat, never slows a prompt, and the text is never stored.
-
-## Local decisions (nothing leaves your PC)
-Decisions about *your windows and chats* can run on a small local **decision model** (System One style: typed question
-in, probabilities out, no text), e.g. Julia-1 (144M, Apache 2.0) on llama.cpp's `/v1/systemone`. The LLM then only ever
-writes the words of a nudge from abstract facts ("drifted 4 min from Banafah").
-1. Get llama.cpp `b11701` (Windows CPU zip) into `vendor/llama` and `Julia-1-Q8_0.gguf` (ggml-org/Julia-1-GGUF) into
-   `vendor/models` (sources and SHA-256 in `scripts/julia.mjs`).
-2. `npm run julia` (starts it on 127.0.0.1:18090), then `BD_JUDGE=local` in `.env`.
-3. `npm run eval:decider` measures it on 40 labelled window titles (accuracy, false nudges, misses, speed per confidence
-   threshold) before you trust it. Tune `BD_DECIDER_THRESHOLD` (default 0.75: below it the decider stays quiet).
-The decider refuses non-local endpoints unless `BD_DECIDER_ALLOW_REMOTE=1` (e.g. hosted Jev, a deliberate choice).
 
 ## How it decides
 ```
 active window (title + app, every 15 s, ~50 ms)
   -> rules: quest keywords (on task) / quest + global distractions (drift) / idle (away) / otherwise unclear
-  -> unclear for 6 min on one site/app -> the judge (model) decides once, cached 30 min
-  -> drift tracker: nudge after ~3 min of drift (tuned by feedback), cooldown 5 min, never while away
-  -> brain (pi agent): one message + one next action, or split a big step first; templates if no model
+  -> unclear for 6 min on one site/app -> the local decision model decides once (cached 30 min)
+       quiet unless it is >= 75% sure
+  -> drift tracker: nudge after ~3 min of drift (tuned by feedback), cooldown 5 min, never while away or on break
+  -> pi agent (Muse Spark -> Llama -> template): one message + one next action, or split a big step first
   -> stuck: 25 min on task without finishing -> offer a smaller step
   -> morning plan / evening "what you won today"
 ```
-Feedback teaches it: **wrong nudge** makes that trigger fine for the quest and waits 30 s longer next time;
-**missed drift** blocks the site/app it saw for the quest and reacts 30 s sooner. Every learned rule can be listed
-and undone.
-
-## Game rules
-- XP for **finished steps**, never for time and never from the model. ×1.5 comeback bonus when you finish within
-  5 min of a drift or stuck nudge.
-- Skills level separately (Client Work, Code, Admin, …). Titles for milestones (First Step, Comeback Kid, Boss
-  Slayer, On a Roll, Deadline Hunter, Centurion).
-- Deadlines are bosses with an HP bar of remaining steps; +50 XP when defeated.
-- Streak shield: one free missed day per week; a broken streak restarts at 1, never 0.
-- The familiar evolves at levels 5, 10 and 20 (antenna, wings, crown).
 
 ## Privacy
-- Window titles are held **in memory only** (last 15 min) and never written to disk. The log keeps app names, the
-  rule that fired, and short site keys of learned rules.
-- The model sees quest text and stats for nudges. The judge sees the app and window title of the stretch it judges;
-  screenshots only if you set `BD_JUDGE=screenshot` and the model accepts images; nothing is stored. `BD_JUDGE=off`
-  disables it.
-- Everything lives in `%APPDATA%\body-double\` (`state.json`, `stats.html`, `daemon.json`). The service listens on
-  127.0.0.1 only, behind a random token.
-
-## Settings (`.env`)
-| Setting | Default | What it does |
-|---|---|---|
-| `BD_PROVIDER` | auto | `meta`, `zai` or `none` (auto picks from the keys present) |
-| `BD_MODEL` | provider default | e.g. `muse-spark-1.3`, `glm-5.3` |
-| `BD_JUDGE` | `title` | `title`, `screenshot` or `off` |
-| `BD_UNCLEAR_MINUTES` | 6 | unknown site/app this long before the judge is asked |
-| `BD_STUCK_MINUTES` | 25 | on task this long without finishing before a smaller step is offered |
-| `BD_DRIFT_SECONDS` | 180 | starting nudge delay; feedback tunes it within 90–600 s |
-| `BD_MORNING_HOUR` / `BD_EVENING_HOUR` | 6 / 19 | day plan / day summary |
-| `BD_SAMPLE_SECONDS` | 15 | how often the active window is read |
-| `BD_PORT`, `BD_DATA_DIR` | 47821, `%APPDATA%\body-double` | service port and data folder |
+- Window titles stay **in memory only** (last 15 min) and are never written to disk. The log keeps app names,
+  the rule that fired, and short site keys of learned rules.
+- Decisions about your windows run on **this PC** (Kev). Nudge text runs on this PC (Llama), or at Meta if you
+  add a key; it never contains a window title.
+- No screenshots unless you explicitly set `BD_JUDGE=screenshot`. The service and the models listen on
+  127.0.0.1 only; the service needs a random token.
 
 ## Evidence
-`npm run stats` writes a standalone page from your real log: totals, drifts by hour, per-day table, nudge sources,
-judge verdicts, and the kill-test view. It is framed as what it is: one person's use, not a study.
+See [docs/EVIDENCE.md](docs/EVIDENCE.md): automated tests, a 20-minute soak test, and the decision-model eval
+with real numbers, including where the first model failed. `npm run stats` builds a page from your own log.
+That page is one person's use, not a study.
 
 ## Architecture
 | Path | Role |
 |---|---|
 | `src/core/watcher.js` | foreground window + idle time via one long-lived PowerShell helper; self-healing |
-| `src/core/classifier.js` | rules → on-task / drift / away / unclear, with the rule that fired |
-| `src/core/drift.js` | drift episodes, cooldown, returns |
-| `src/core/game.js` | XP, levels, skills, titles, bosses, streak shields (deterministic) |
-| `src/core/store.js` | atomic JSON state |
-| `src/agent/brain.js` | pi agents: nudge/split brain with template fallback; the judge |
-| `src/companion.js` | the heartbeat that ties it together (+ learning, stuck, bookends) |
-| `src/daemon.js` | background service: JSON API + live events (127.0.0.1, token) |
-| `src/mcp.js`, `src/client.js` | Claude tools; shared client that starts the service |
-| `src/pet/*` | Electron pet + panel; procedural pixel art; behaviour |
-| `src/stats.js` | evidence page |
+| `src/core/classifier.js`, `drift.js` | rules → on-task / drift / away / unclear; drift episodes, cooldown, returns |
+| `src/core/game.js`, `store.js` | XP, levels, skills, titles, bosses, streak shields (deterministic); atomic JSON state |
+| `src/agent/brain.js` | pi agents: the nudge/split brain with the model chain and template fallback; the judge |
+| `src/agent/decider.js` | local decision model through pi-ai's System One classifier API |
+| `src/core/decider-server.js` | starts llama.cpp with Kev and Llama when the service starts |
+| `src/companion.js` | the heartbeat: learning, stuck, bookends, vault, focus sessions |
+| `src/daemon.js`, `src/mcp.js` | background service (JSON API + live events); Claude tools |
+| `src/pet/*` | Electron creature, bubble, focus ring, HUD; procedural pixel art |
+
+## Settings (`.env`, all optional)
+| Setting | Default | What it does |
+|---|---|---|
+| `META_API_KEY` | – | Muse Spark writes nudges first |
+| `BD_DECIDER` | `kev` | local decision model: `kev`, `kev-4b`, `julia` or `off` |
+| `BD_WRITER` | on | `off` skips the local Llama |
+| `BD_DECIDER_THRESHOLD` | 0.75 | below this the decision model stays quiet |
+| `BD_DRIFT_SECONDS` | 180 | starting nudge delay; feedback tunes it within 90–600 s |
+| `BD_STUCK_MINUTES` / `BD_UNCLEAR_MINUTES` | 25 / 6 | stuck offer / when the decider is asked |
+| `BD_MORNING_HOUR` / `BD_EVENING_HOUR` | 6 / 19 | day plan / day summary |
 
 ## Status and limits
-Hackathon build. Windows only (the watcher uses Win32 calls through PowerShell). Without a model key, nudges are
-templates and unclear stretches are never judged. The kill test (≥ 4 of 5 real drifts caught, ≤ 1 wrong nudge in one
-real work hour) has not been run yet.
+- Windows only (the watcher uses Win32 through PowerShell).
+- The creature's look is a first version; it evolves in four stages, and a richer character is next.
+- Real-use evidence is one person (n = 1).
 
-MIT licence.
+## Credits and licences
+MIT for this code. **Built with Llama**: Llama 3.2 is licensed under the Llama 3.2 Community License, © Meta
+Platforms, Inc. Kev (jaredpalmer/kev, Apache-2.0, on Qwen3.5). Julia-1 (SupersonicLabs, Apache-2.0).
+llama.cpp (MIT). pi agent runtime (earendil-works). Models are downloaded by `setup:models`, not stored in
+this repo.

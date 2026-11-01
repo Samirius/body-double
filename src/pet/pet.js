@@ -88,7 +88,7 @@ $('m-hud').onclick = () => { toggleMenu(false); act('panel'); };
 
 // --- transmission bubble ---------------------------------------------------
 const KIND = {
-  drift: { title: 'INCOMING // FAMILIAR', accent: '#ff2bd6' },
+  drift: { title: 'INCOMING // NUDGLING', accent: '#ff2bd6' },
   chat: { title: 'SIGNAL // OFF-QUEST CHAT', accent: '#ff2bd6' },
   stuck: { title: 'ASSIST // STEP TOO BIG?', accent: '#f5ff3b' },
   morning: { title: 'BOOT // TODAY’S RUN', accent: '#00f0ff' },
@@ -210,7 +210,7 @@ window.bd.onEvent((ev) => {
     case 'skill-up': floater(`${String(g.skill).toUpperCase()} → LV ${g.level}`, 'good'); break;
     case 'title': floater(`TITLE UNLOCKED // ${String(g.name).toUpperCase()}`, 'big'); cheer(2500); break;
     case 'boss-defeated': floater('BOSS DOWN', 'big'); cheer(4000); break;
-    case 'pet-evolved': state.stage = g.stage; floater('FAMILIAR EVOLVED', 'big'); cheer(4000); break;
+    case 'pet-evolved': state.stage = g.stage; floater('NUDGLING EVOLVED', 'big'); cheer(4000); break;
     case 'shield-used': floater('STREAK SHIELD USED', 'good'); break;
     case 'returned': floater('BACK ON QUEST', 'good'); cheer(1500); hideBubble(); break;
     case 'session-done': floater(`SESSION COMPLETE // ${g.minutes} MIN`, 'big'); cheer(3000); break;

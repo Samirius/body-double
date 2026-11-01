@@ -1,0 +1,231 @@
+{
+  "minutes": 20,
+  "sampleSeconds": 2,
+  "rows": [
+    {
+      "minute": 1,
+      "serviceMB": 63,
+      "helpers": 1,
+      "helperMB": 68,
+      "logEntries": 3,
+      "stateKB": 1,
+      "tickErrors": 0,
+      "watcherRestarts": 0,
+      "label": "unclear"
+    },
+    {
+      "minute": 2,
+      "serviceMB": 63,
+      "helpers": 1,
+      "helperMB": 68,
+      "logEntries": 3,
+      "stateKB": 1,
+      "tickErrors": 0,
+      "watcherRestarts": 0,
+      "label": "unclear"
+    },
+    {
+      "minute": 3,
+      "serviceMB": 64,
+      "helpers": 1,
+      "helperMB": 68,
+      "logEntries": 3,
+      "stateKB": 1,
+      "tickErrors": 0,
+      "watcherRestarts": 0,
+      "label": "unclear"
+    },
+    {
+      "minute": 4,
+      "serviceMB": 64,
+      "helpers": 1,
+      "helperMB": 68,
+      "logEntries": 4,
+      "stateKB": 1,
+      "tickErrors": 0,
+      "watcherRestarts": 0,
+      "label": "on-task"
+    },
+    {
+      "minute": 5,
+      "serviceMB": 64,
+      "helpers": 1,
+      "helperMB": 68,
+      "logEntries": 4,
+      "stateKB": 1,
+      "tickErrors": 0,
+      "watcherRestarts": 0,
+      "label": "on-task"
+    },
+    {
+      "minute": 6,
+      "serviceMB": 64,
+      "helpers": 1,
+      "helperMB": 68,
+      "logEntries": 4,
+      "stateKB": 1,
+      "tickErrors": 0,
+      "watcherRestarts": 0,
+      "label": "on-task"
+    },
+    {
+      "minute": 7,
+      "serviceMB": 64,
+      "helpers": 1,
+      "helperMB": 68,
+      "logEntries": 4,
+      "stateKB": 1,
+      "tickErrors": 0,
+      "watcherRestarts": 0,
+      "label": "on-task"
+    },
+    {
+      "minute": 8,
+      "serviceMB": 52,
+      "helpers": 1,
+      "helperMB": 58,
+      "logEntries": 4,
+      "stateKB": 1,
+      "tickErrors": 0,
+      "watcherRestarts": 0,
+      "label": "on-task"
+    },
+    {
+      "minute": 9,
+      "serviceMB": 52,
+      "helpers": 1,
+      "helperMB": 58,
+      "logEntries": 4,
+      "stateKB": 1,
+      "tickErrors": 0,
+      "watcherRestarts": 0,
+      "label": "on-task"
+    },
+    {
+      "minute": 10,
+      "serviceMB": 52,
+      "helpers": 1,
+      "helperMB": 57,
+      "logEntries": 4,
+      "stateKB": 1,
+      "tickErrors": 0,
+      "watcherRestarts": 0,
+      "label": "on-task"
+    },
+    {
+      "minute": 11,
+      "serviceMB": 52,
+      "helpers": 1,
+      "helperMB": 57,
+      "logEntries": 4,
+      "stateKB": 1,
+      "tickErrors": 0,
+      "watcherRestarts": 0,
+      "label": "on-task"
+    },
+    {
+      "minute": 12,
+      "serviceMB": 35,
+      "helpers": 1,
+      "helperMB": 37,
+      "logEntries": 4,
+      "stateKB": 1,
+      "tickErrors": 0,
+      "watcherRestarts": 0,
+      "label": "on-task"
+    },
+    {
+      "minute": 13,
+      "serviceMB": 34,
+      "helpers": 1,
+      "helperMB": 36,
+      "logEntries": 6,
+      "stateKB": 2,
+      "tickErrors": 0,
+      "watcherRestarts": 0,
+      "label": "on-task"
+    },
+    {
+      "minute": 14,
+      "serviceMB": 25,
+      "helpers": 1,
+      "helperMB": 37,
+      "logEntries": 8,
+      "stateKB": 2,
+      "tickErrors": 0,
+      "watcherRestarts": 0,
+      "label": "on-task"
+    },
+    {
+      "minute": 16,
+      "serviceMB": 26,
+      "helpers": 1,
+      "helperMB": 25,
+      "logEntries": 9,
+      "stateKB": 2,
+      "tickErrors": 0,
+      "watcherRestarts": 0,
+      "label": "unclear"
+    },
+    {
+      "minute": 17,
+      "serviceMB": 26,
+      "helpers": 1,
+      "helperMB": 26,
+      "logEntries": 10,
+      "stateKB": 2,
+      "tickErrors": 0,
+      "watcherRestarts": 0,
+      "label": "on-task"
+    },
+    {
+      "minute": 18,
+      "serviceMB": 25,
+      "helpers": 1,
+      "helperMB": 26,
+      "logEntries": 10,
+      "stateKB": 2,
+      "tickErrors": 0,
+      "watcherRestarts": 0,
+      "label": "on-task"
+    },
+    {
+      "minute": 19,
+      "serviceMB": 25,
+      "helpers": 1,
+      "helperMB": 27,
+      "logEntries": 13,
+      "stateKB": 3,
+      "tickErrors": 0,
+      "watcherRestarts": 0,
+      "label": "unclear"
+    },
+    {
+      "minute": 20,
+      "serviceMB": 25,
+      "helpers": 1,
+      "helperMB": 26,
+      "logEntries": 14,
+      "stateKB": 3,
+      "tickErrors": 0,
+      "watcherRestarts": 0,
+      "label": "drift"
+    },
+    {
+      "minute": 21,
+      "serviceMB": 26,
+      "helpers": 1,
+      "helperMB": 27,
+      "logEntries": 16,
+      "stateKB": 3,
+      "tickErrors": 0,
+      "watcherRestarts": 0,
+      "label": "drift"
+    }
+  ],
+  "memoryGrowthMB": -37,
+  "tickErrors": 0,
+  "watcherRestarts": 0,
+  "maxHelpers": 1,
+  "stderr": ""
+}
