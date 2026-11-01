@@ -16,7 +16,7 @@ what keeps going.
 ## Quick start (Windows, Node 22+)
 ```bash
 npm install
-npm test            # 47 tests, no API key needed
+npm test            # 54 tests, no API key needed
 npm run test:pet    # launches the real pet, drives it, saves 4 screenshots, checks them
 npm run pet         # the pixel familiar (starts the background service if needed)
 ```
@@ -45,6 +45,17 @@ ZAI_API_KEY=...             # z.ai (GLM 5.3) with BD_PROVIDER=zai
 - `node scripts/register-hook.mjs`: let it notice when a **Claude chat** drifts from your active quest. Each prompt is
   judged once (needs a model key); off-topic chats get one gentle "park the idea" nudge at most every 30 min. The
   hook never prints into the chat, never slows a prompt, and the text is never stored.
+
+## Local decisions (nothing leaves your PC)
+Decisions about *your windows and chats* can run on a small local **decision model** (System One style: typed question
+in, probabilities out, no text), e.g. Julia-1 (144M, Apache 2.0) on llama.cpp's `/v1/systemone`. The LLM then only ever
+writes the words of a nudge from abstract facts ("drifted 4 min from Banafah").
+1. Get llama.cpp `b11701` (Windows CPU zip) into `vendor/llama` and `Julia-1-Q8_0.gguf` (ggml-org/Julia-1-GGUF) into
+   `vendor/models` (sources and SHA-256 in `scripts/julia.mjs`).
+2. `npm run julia` (starts it on 127.0.0.1:18090), then `BD_JUDGE=local` in `.env`.
+3. `npm run eval:decider` measures it on 40 labelled window titles (accuracy, false nudges, misses, speed per confidence
+   threshold) before you trust it. Tune `BD_DECIDER_THRESHOLD` (default 0.75: below it the decider stays quiet).
+The decider refuses non-local endpoints unless `BD_DECIDER_ALLOW_REMOTE=1` (e.g. hosted Jev, a deliberate choice).
 
 ## How it decides
 ```

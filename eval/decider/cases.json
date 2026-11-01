@@ -1,0 +1,54 @@
+{
+  "note": "Window titles a decider must judge against a quest. Written by Claude for Samir on 2026-11-01 (not real user data). expected: on-task | off-task | either (genuinely ambiguous: only a confident off-task verdict counts as a false nudge).",
+  "quests": {
+    "banafah": { "title": "Banafah in-store Merchant Center verification", "tag": "Client Work", "next_step": "Add store hours in Merchant Center" },
+    "email": { "title": "Write the White Friday email", "tag": "Sales", "next_step": "List 3 offers" },
+    "checkout": { "title": "Fix the WooCommerce checkout total bug", "tag": "Code", "next_step": "Reproduce the wrong total on staging" },
+    "video": { "title": "Record the hackathon demo video", "tag": "Creative", "next_step": "Record the narration" }
+  },
+  "cases": [
+    { "quest": "banafah", "app": "brave", "title": "Merchant Center Next - Business info - Brave", "expected": "on-task" },
+    { "quest": "banafah", "app": "chrome", "title": "Google Business Profile - Opening hours - Google Chrome", "expected": "on-task" },
+    { "quest": "banafah", "app": "brave", "title": "Products ‹ Banafah | بنفعة — WooCommerce - Brave", "expected": "on-task" },
+    { "quest": "banafah", "app": "brave", "title": "In-store verification requirements - Merchant Center Help - Brave", "expected": "on-task" },
+    { "quest": "banafah", "app": "excel", "title": "banafah-stores-list.xlsx - Excel", "expected": "on-task" },
+    { "quest": "banafah", "app": "brave", "title": "Funny cat compilation 2026 - YouTube - Brave", "expected": "off-task" },
+    { "quest": "banafah", "app": "brave", "title": "Show HN: a new JS framework - Hacker News - Brave", "expected": "off-task" },
+    { "quest": "banafah", "app": "brave", "title": "Meta hackathon project ideas - Google Docs - Brave", "expected": "off-task" },
+    { "quest": "banafah", "app": "brave", "title": "ريال مدريد ضد برشلونة - يلا كورة - Brave", "expected": "off-task" },
+    { "quest": "banafah", "app": "brave", "title": "Gmail - Inbox (14) - Brave", "expected": "either" },
+
+    { "quest": "email", "app": "brave", "title": "Mailchimp - Campaign: White Friday 2026 - Brave", "expected": "on-task" },
+    { "quest": "email", "app": "winword", "title": "White Friday offers draft.docx - Word", "expected": "on-task" },
+    { "quest": "email", "app": "brave", "title": "عروض الجمعة البيضاء - بنفعة - Brave", "expected": "on-task" },
+    { "quest": "email", "app": "brave", "title": "Subject line ideas for Black Friday emails - Litmus - Brave", "expected": "on-task" },
+    { "quest": "email", "app": "brave", "title": "Amazon.eg: wireless earbuds - Brave", "expected": "off-task" },
+    { "quest": "email", "app": "netflix", "title": "Netflix", "expected": "off-task" },
+    { "quest": "email", "app": "brave", "title": "Apartment prices New Cairo - Aqarmap - Brave", "expected": "off-task" },
+    { "quest": "email", "app": "brave", "title": "Competitor White Friday sale - Noon Egypt - Brave", "expected": "either" },
+    { "quest": "email", "app": "brave", "title": "(3) Home / X - Brave", "expected": "off-task" },
+    { "quest": "email", "app": "brave", "title": "Canva - White Friday banner - Brave", "expected": "on-task" },
+
+    { "quest": "checkout", "app": "code", "title": "checkout.php - woocommerce-fixes - Visual Studio Code", "expected": "on-task" },
+    { "quest": "checkout", "app": "brave", "title": "WooCommerce checkout not updating totals - Stack Overflow - Brave", "expected": "on-task" },
+    { "quest": "checkout", "app": "windowsterminal", "title": "ssh staging - wp wc shop_order list", "expected": "on-task" },
+    { "quest": "checkout", "app": "brave", "title": "Checkout ‹ Staging Banafah — WordPress - Brave", "expected": "on-task" },
+    { "quest": "checkout", "app": "brave", "title": "woocommerce/woocommerce: Issue #48213 cart totals - GitHub - Brave", "expected": "on-task" },
+    { "quest": "checkout", "app": "steam", "title": "Steam", "expected": "off-task" },
+    { "quest": "checkout", "app": "brave", "title": "Elden Ring DLC review - IGN - Brave", "expected": "off-task" },
+    { "quest": "checkout", "app": "brave", "title": "Top 10 mechanical keyboards 2026 - YouTube - Brave", "expected": "off-task" },
+    { "quest": "checkout", "app": "brave", "title": "PHP 8.4 release notes - php.net - Brave", "expected": "either" },
+    { "quest": "checkout", "app": "brave", "title": "Reddit - r/webdev - Brave", "expected": "either" },
+
+    { "quest": "video", "app": "obs64", "title": "OBS 31.0 - Profile: Untitled - Scenes: Untitled", "expected": "on-task" },
+    { "quest": "video", "app": "resolve", "title": "DaVinci Resolve - body-double-demo", "expected": "on-task" },
+    { "quest": "video", "app": "audacity", "title": "narration-take-3 - Audacity", "expected": "on-task" },
+    { "quest": "video", "app": "brave", "title": "Storyboard - body-double - GitHub - Brave", "expected": "on-task" },
+    { "quest": "video", "app": "brave", "title": "How to record a clean voice-over at home - YouTube - Brave", "expected": "either" },
+    { "quest": "video", "app": "brave", "title": "Instagram - Reels - Brave", "expected": "off-task" },
+    { "quest": "video", "app": "brave", "title": "Bitcoin price today - CoinMarketCap - Brave", "expected": "off-task" },
+    { "quest": "video", "app": "brave", "title": "Best pizza in Zamalek - Google Maps - Brave", "expected": "off-task" },
+    { "quest": "video", "app": "spotify", "title": "Spotify Premium", "expected": "either" },
+    { "quest": "video", "app": "brave", "title": "Football transfer news live - Kooora - Brave", "expected": "off-task" }
+  ]
+}

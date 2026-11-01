@@ -4,6 +4,7 @@ import { createStore } from './core/store.js';
 import { createWatcher } from './core/watcher.js';
 import { createBrain, createJudge, createModelFromEnv } from './agent/brain.js';
 import { captureScreen } from './core/screenshot.js';
+import { createDecider } from './agent/decider.js';
 import { createCompanion } from './companion.js';
 
 export async function createApp({ env = process.env, ui, log = console.log }) {
@@ -12,8 +13,12 @@ export async function createApp({ env = process.env, ui, log = console.log }) {
   process.on('exit', () => store.flush());
   let modelHandle = null;
   try { modelHandle = await createModelFromEnv(env); } catch (e) { log(`model setup failed, using templates: ${e.message}`); }
-  // BD_JUDGE: title (default) | screenshot | off. See createJudge in agent/brain.js.
-  const judge = createJudge({ modelHandle, mode: (env.BD_JUDGE || 'title').toLowerCase(), log: (t, d) => store.log(t, d) });
+  // BD_JUDGE: local (a decision model on this PC, see agent/decider.js; the
+  // default when BD_DECIDER_URL is set) | title | screenshot | off.
+  const judgeMode = (env.BD_JUDGE || (env.BD_DECIDER_URL ? 'local' : 'title')).toLowerCase();
+  const judge = judgeMode === 'local'
+    ? createDecider({ baseUrl: env.BD_DECIDER_URL || 'http://127.0.0.1:18090/v1', modelId: env.BD_DECIDER_MODEL || 'julia-1', threshold: Number(env.BD_DECIDER_THRESHOLD) || 0.75, allowRemote: env.BD_DECIDER_ALLOW_REMOTE === '1', log: (t, d) => store.log(t, d) })
+    : createJudge({ modelHandle, mode: judgeMode, log: (t, d) => store.log(t, d) });
   const num = (v) => (v != null && v !== '' && Number.isFinite(Number(v)) ? Number(v) : undefined);
   const timing = Object.fromEntries(Object.entries({ unclearMinutes: num(env.BD_UNCLEAR_MINUTES), stuckMinutes: num(env.BD_STUCK_MINUTES), morningHour: num(env.BD_MORNING_HOUR), eveningHour: num(env.BD_EVENING_HOUR) }).filter(([, v]) => v !== undefined));
   const companion = createCompanion({
