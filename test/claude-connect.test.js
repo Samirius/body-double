@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { mkdtempSync, writeFileSync, readFileSync, readdirSync } from 'node:fs';
+import { mkdtempSync, writeFileSync, readFileSync, readdirSync, existsSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { connectClaude, claudeConnected } from '../src/claude-connect.js';
@@ -18,8 +18,11 @@ test('connect claude: adds one entry, keeps the rest, backs up, and can be undon
   assert.match(cfg.mcpServers.nudgling.args[0], /mcp\.js$/);
   assert.ok(r.backup && readdirSync(home).some((f) => f.startsWith('.claude.json.bak-')));
   assert.equal(claudeConnected({ home }), true);
+  // The skill comes with the tools, and goes with them.
+  assert.match(readFileSync(path.join(home, '.claude', 'skills', 'nudgling', 'SKILL.md'), 'utf8'), /^---\nname: nudgling\n/);
   connectClaude({ home, remove: true });
   assert.equal(claudeConnected({ home }), false);
+  assert.equal(existsSync(path.join(home, '.claude', 'skills', 'nudgling')), false);
   assert.ok(JSON.parse(readFileSync(path.join(home, '.claude.json'), 'utf8')).mcpServers.other);
 });
 

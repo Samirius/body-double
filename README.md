@@ -34,7 +34,8 @@ ask tiny, and makes progress visible, because visible progress is what keeps you
   day with a plan and closes it with what you won.
 - **Progress is the game.** XP only for finished steps (never for time, never from the model). Deadlines are
   bosses with HP bars. Streak shields forgive a missed day. Titles, skills, and four evolution stages.
-- **Works from Claude.** Click **Connect Claude** in the HUD once (it backs up `~/.claude.json` first; a second
+- **Works from Claude.** Click **Connect Claude** in the HUD once: it adds the MCP tools and the
+  [skill](skills/nudgling/SKILL.md) that teaches Claude when to use them (it backs up `~/.claude.json` first; a second
   click undoes it). Then say "I'm starting the Banafah verification, steps are …" or "done with that" in any
   Claude chat, and Claude drives the companion through MCP tools.
 
