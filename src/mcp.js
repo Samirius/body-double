@@ -14,7 +14,7 @@ const tool = (name, description, shape, fn) => server.registerTool(name, { descr
   try { return text(await fn(args || {})); } catch (e) { return { ...text(`error: ${e.message}`), isError: true }; }
 });
 
-const server = new McpServer({ name: 'focus-companion', version: '0.1.0' });
+const server = new McpServer({ name: 'nudgling', version: '0.1.0' });
 
 tool('companion_status', 'Current focus state: active quest and next step, level and XP progress, skills, titles, streak, boss HP, nudge stats, paused or not.', {}, () => call('GET', '/status'));
 tool('companion_list_quests', 'List all quests with progress and which one is active.', {}, () => call('GET', '/quests'));

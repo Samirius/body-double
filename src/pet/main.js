@@ -54,7 +54,7 @@ const togglePanel = () => { if (panel.isVisible()) panel.hide(); else { panel.sh
 function createTray() {
   const bmp = frameToBitmap(buildFrame({ state: 'idle', stage: 1 }), 1, { bgra: true });
   tray = new Tray(nativeImage.createFromBitmap(Buffer.from(bmp.data), { width: bmp.width, height: bmp.height }));
-  tray.setToolTip('Focus companion');
+  tray.setToolTip('Nudgling');
   tray.setContextMenu(Menu.buildFromTemplate([
     { label: 'Show panel', click: togglePanel },
     { label: 'Mark next step done', click: () => act('done') },

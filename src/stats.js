@@ -71,7 +71,7 @@ export function renderStatsHtml(s) {
   const rows = s.perDay.map((d) => `<tr><td>${d.day}</td><td>${d.steps}</td><td>${d.xp}</td><td>${d.driftNudges}</td><td>${d.returns}</td><td>${secs(d.medianReturnSeconds)}</td><td>${d.wrong}</td><td>${d.missed}</td><td>${esc(d.titles.map((x) => titleName[x] || x).join(', '))}</td></tr>`).join('') || '<tr><td colspan="9" class="muted">No activity logged yet.</td></tr>';
   const hourRows = s.driftsByHour.map((v, h) => (v ? `<tr><td>${String(h).padStart(2, '0')}:00</td><td>${v}</td></tr>` : '')).join('') || '<tr><td colspan="2" class="muted">No drifts logged.</td></tr>';
   return `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Focus companion stats</title>
+<title>Nudgling stats</title>
 <style>
 :root{--bg:#fcfcfb;--ink:#1f1f1d;--muted:#6b6a65;--line:#e6e4df;--card:#ffffff;--bar:#2a78d6}
 @media (prefers-color-scheme:dark){:root{--bg:#1a1a19;--ink:#ecebe7;--muted:#a3a29c;--line:#34332f;--card:#222220;--bar:#3987e5}}
@@ -86,7 +86,7 @@ table{width:100%;border-collapse:collapse;font-variant-numeric:tabular-nums;back
 th,td{text-align:left;padding:7px 10px;border-bottom:1px solid var(--line);font-size:13px}th{color:var(--muted);font-weight:600}
 .wrap{overflow-x:auto}details{margin-top:8px}pre{white-space:pre-wrap;background:var(--card);border:1px solid var(--line);border-radius:10px;padding:12px;font-size:12px}
 </style></head><body><main>
-<h1>Focus companion: what actually happened</h1>
+<h1>Nudgling: what actually happened</h1>
 <p class="note">One person's real use (n = 1), from the local event log. Not a study and no claim beyond these numbers. Generated ${esc(s.generatedAt.slice(0, 16).replace('T', ' '))} UTC.</p>
 <div class="tiles">
 ${tile('days active', t.daysActive)}${tile('steps finished', t.steps)}${tile('XP / level', `${t.xp} / ${t.level}`)}${tile('drift nudges', t.driftNudges)}

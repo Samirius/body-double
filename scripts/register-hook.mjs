@@ -23,4 +23,4 @@ if (!remove) groups.push({ hooks: [{ type: 'command', command, timeout: 5 }] });
 if (groups.length) settings.hooks.UserPromptSubmit = groups; else delete settings.hooks.UserPromptSubmit;
 writeFileSync(`${file}.tmp`, JSON.stringify(settings, null, 2));
 renameSync(`${file}.tmp`, file);
-console.log(`${remove ? 'Removed' : 'Added'} the focus-companion chat hook in ${file}. New sessions pick it up.`);
+console.log(`${remove ? 'Removed' : 'Added'} the nudgling chat hook in ${file}. New sessions pick it up.`);
