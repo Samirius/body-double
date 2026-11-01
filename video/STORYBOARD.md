@@ -29,7 +29,7 @@ export as WAV), then run `npm run video -- --reuse-shots`. Lines you skip keep t
 | 06-02 | XP for finished steps, never for time. |
 | 06-03 | Deadlines are bosses with health bars, and streaks forgive a missed day. |
 | 07-01 | Under the hood, a pi agent writes every nudge. |
-| 07-02 | It uses Meta's Muse Spark in the cloud, and Meta's Llama running right on my PC when I am offline. |
+| 07-02 | It can use Meta's Muse Spark in the cloud, and it runs Meta's Llama right here on my PC, offline and free. |
 | 07-03 | A small local model decides whether a window fits my quest, so my screen never leaves the machine. |
 | 08-01 | And I never type commands. |
 | 08-02 | I tell Claude what I am starting, or that I am done, and it drives the Nudgling through M C P tools. |
