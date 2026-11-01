@@ -27,26 +27,38 @@ export function emptyState() {
   };
 }
 
-export function createStore(dir = defaultDataDir()) {
+// debounceMs: 0 writes on every change (tests, terminal); the long-running
+// service passes ~2000 so a busy minute is a few writes, not dozens. Call
+// flush() before exiting; createApp registers it on process exit.
+export function createStore(dir = defaultDataDir(), { debounceMs = 0 } = {}) {
   const file = path.join(dir, 'state.json');
   mkdirSync(dir, { recursive: true });
   let state = existsSync(file) ? { ...emptyState(), ...JSON.parse(readFileSync(file, 'utf8')) } : emptyState();
+  let timer = null;
+  let writes = 0;
 
   const save = () => {
     const tmp = `${file}.tmp`;
     writeFileSync(tmp, JSON.stringify(state, null, 2));
     renameSync(tmp, file);
+    writes++;
+  };
+  const schedule = () => {
+    if (!debounceMs) return save();
+    if (!timer) timer = setTimeout(() => { timer = null; save(); }, debounceMs);
   };
 
   return {
     file,
     get: () => state,
-    update(fn) { state = fn(state) ?? state; save(); return state; },
+    update(fn) { state = fn(state) ?? state; schedule(); return state; },
     log(type, data = {}, at = Date.now()) {
       state.log.push({ at, type, ...data });
       if (state.log.length > LOG_CAP) state.log.splice(0, state.log.length - LOG_CAP);
-      save();
+      schedule();
     },
+    flush() { if (timer) { clearTimeout(timer); timer = null; save(); } },
+    writes: () => writes,
     activeQuest: () => state.quests.find((q) => q.id === state.activeQuestId) || null,
   };
 }

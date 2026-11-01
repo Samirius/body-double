@@ -79,6 +79,16 @@ async function act(name, payload = {}) {
     case 'pause-toggle': { const s = await client.call('GET', '/status'); return client.call('POST', '/pause', { paused: !s.paused }); }
     case 'activate': return client.call('POST', '/quests/activate', { query: String(payload.query || '') });
     case 'import': return client.call('POST', '/import/jarvis', {});
+    case 'add-quest': {
+      // Validate here too: the renderer is UI, not a trust boundary.
+      const str = (v, n) => String(v ?? '').trim().slice(0, n);
+      const title = str(payload.title, 120);
+      if (!title) throw new Error('a quest needs a title');
+      const steps = (Array.isArray(payload.steps) ? payload.steps : []).map((s) => str(s, 120)).filter(Boolean).slice(0, 20);
+      const allow = (Array.isArray(payload.allow) ? payload.allow : []).map((s) => str(s, 40).toLowerCase()).filter(Boolean).slice(0, 10);
+      const deadline = /^\d{4}-\d{2}-\d{2}$/.test(String(payload.deadline || '')) ? payload.deadline : undefined;
+      return client.call('POST', '/quests', { title, steps, allow, deadline, tag: str(payload.tag, 30) || 'General' });
+    }
     case 'panel': return togglePanel();
     case 'stats': { const r = await client.call('GET', '/stats'); await shell.openPath(r.htmlPath); return r.totals; }
     default: throw new Error(`unknown action ${name}`);
@@ -120,6 +130,22 @@ async function selftest() {
     panel.show(); panel.webContents.send('bd:refresh');
     await wait(1500);
     await shot(panel, '4-panel');
+    // Add a quest through the panel's real form.
+    await panel.webContents.executeJavaScript(`(() => {
+      document.getElementById('new-quest').open = true;
+      document.getElementById('q-title').value = 'Write the White Friday email';
+      document.getElementById('q-steps').value = ['Open last year email', 'List 3 offers', 'Draft subject line'].join(String.fromCharCode(10));
+      document.getElementById('q-deadline').value = '2026-11-20';
+      document.getElementById('q-tag').value = 'Sales';
+      document.getElementById('q-allow').value = 'mailchimp, white friday';
+      document.getElementById('q-submit').click();
+    })()`);
+    await wait(1500);
+    const afterAdd = await client.call('GET', '/status');
+    step('panel-quest', afterAdd.quest);
+    if (afterAdd.quest?.title !== 'Write the White Friday email' || afterAdd.quest?.boss?.max !== 3) throw new Error('panel form did not create the quest');
+    await panel.webContents.executeJavaScript("document.querySelector('main').scrollTop = 0");
+    await shot(panel, '5-panel-after-add');
     report.ok = true;
   } catch (e) { report.ok = false; report.error = String(e.stack || e); }
   writeFileSync(path.join(SELFTEST_DIR, 'report.json'), JSON.stringify(report, null, 2));

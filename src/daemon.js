@@ -127,6 +127,6 @@ server.listen(PORT, '127.0.0.1', () => {
   console.log(`companion service on 127.0.0.1:${PORT} (${modelLabel}); data ${store.file}`);
 });
 
-const shutdown = () => { companion.stop(); server.close(); process.exit(0); };
+const shutdown = () => { companion.stop(); store.flush(); server.close(); process.exit(0); };
 process.on('SIGINT', shutdown);
 process.on('SIGTERM', shutdown);

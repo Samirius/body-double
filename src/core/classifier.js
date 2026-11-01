@@ -8,6 +8,8 @@ export const DEFAULT_RULES = {
   // Matched against "<app> <title>" lowercased. Kept short on purpose:
   // anything not listed stays 'unclear' rather than becoming a false nudge.
   distractions: ['youtube', 'netflix', 'twitch', 'tiktok', 'instagram', 'facebook', 'reddit', 'x.com', 'steam', 'epic games', 'shahid', 'anghami'],
+  // Messaging: fine in short bursts, drift after an allowance (see companion timing.commAllowanceMinutes).
+  communication: ['whatsapp', 'telegram', 'discord', 'slack', 'signal', 'messenger'],
   // Apps that are neutral plumbing (switching windows, the companion itself).
   neutralApps: ['explorer', 'searchhost', 'shellexperiencehost', 'lockapp', 'body-double', 'electron', 'startmenuexperiencehost', 'applicationframehost'],
 };
@@ -36,6 +38,8 @@ export function classify(sample, quest, rules = DEFAULT_RULES) {
   if (BROWSERS.includes(app) && /\/ x$/.test(stripped)) return { label: 'drift', reason: 'matches distraction "x"', match: { list: 'distractions', keyword: 'x' } };
   const globalDeny = firstMatch(hay, rules.distractions);
   if (globalDeny) return { label: 'drift', reason: `matches distraction "${globalDeny.trim()}"`, match: { list: 'distractions', keyword: norm(globalDeny) } };
+  const comm = firstMatch(hay, rules.communication);
+  if (comm) return { label: 'unclear', reason: `messaging (${comm})`, match: null, comm: norm(comm) };
   return { label: 'unclear', reason: 'no rule matched', match: null };
 }
 

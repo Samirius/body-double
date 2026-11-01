@@ -7,7 +7,9 @@ import { captureScreen } from './core/screenshot.js';
 import { createCompanion } from './companion.js';
 
 export async function createApp({ env = process.env, ui, log = console.log }) {
-  const store = createStore(env.BD_DATA_DIR || undefined);
+  const store = createStore(env.BD_DATA_DIR || undefined, { debounceMs: Number(env.BD_SAVE_MS ?? 2000) });
+  // Batched saves must never be lost on exit.
+  process.on('exit', () => store.flush());
   let modelHandle = null;
   try { modelHandle = await createModelFromEnv(env); } catch (e) { log(`model setup failed, using templates: ${e.message}`); }
   // BD_JUDGE: title (default) | screenshot | off. See createJudge in agent/brain.js.

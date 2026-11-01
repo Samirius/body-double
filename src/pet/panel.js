@@ -33,6 +33,9 @@ async function refresh() {
   $('state').textContent = st.paused && st.pausedUntil ? `snoozed until ${new Date(st.pausedUntil).toTimeString().slice(0, 5)}` : label;
   $('state').className = `pill ${label}`;
   $('a-pause').textContent = st.paused ? 'Resume' : 'Pause';
+  // Until the user opens or closes it themselves, the form follows the state:
+  // open when there is no quest (the obvious next thing), closed otherwise.
+  if (!formTouched) $('new-quest').open = !st.quest;
 
   const quest = st.quest;
   const active = q.ok ? q.data.find((x) => x.active) : null;
@@ -83,6 +86,28 @@ $('a-pause').onclick = run('pause-toggle');
 $('a-import').onclick = run('import');
 $('a-stats').onclick = run('stats');
 $('close').onclick = () => window.bd.act('panel');
+
+let formTouched = false;
+// Only a real click counts as "touched"; programmatic open/close does not.
+$('new-quest').querySelector('summary').addEventListener('click', () => { formTouched = true; });
+$('quest-form').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const list = (v, sep) => v.split(sep).map((x) => x.trim()).filter(Boolean);
+  const payload = {
+    title: $('q-title').value.trim(),
+    steps: list($('q-steps').value, /\r?\n/),
+    deadline: $('q-deadline').value || null,
+    tag: $('q-tag').value,
+    allow: list($('q-allow').value, ','),
+  };
+  if (!payload.title) return;
+  const r = await window.bd.act('add-quest', payload);
+  if (!r.ok) { $('err').textContent = r.error; return; }
+  $('quest-form').reset();
+  $('new-quest').open = false;
+  formTouched = false;
+  refresh();
+});
 window.bd.onRefresh(refresh);
 window.bd.onEvent((ev) => { if (ev.type === 'game' || ev.type === 'hello') refresh(); });
 setInterval(refresh, 20_000);

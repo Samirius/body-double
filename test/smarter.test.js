@@ -121,3 +121,21 @@ test('report and templates: only drift nudges count; stuck/evening templates rea
   assert.match(templateNudge({ quest: q, nextStep: s, event: { type: 'stuck', onTaskSeconds: 1500 } }).message, /25 min/);
   assert.equal(templateNudge({ quest: q, nextStep: s, event: { type: 'evening', summary: 'Today: 2 steps.' } }).nextAction, 'Tomorrow, start with: Upload photo');
 });
+
+test('smarter: messaging gets a 10 min allowance, then counts as drift; never judged', async () => {
+  let asked = 0;
+  const judge = { mode: 'title', judge: async () => { asked++; return { verdict: 'on-task', reason: 'x', source: 'title' }; } };
+  const wa = { app: 'whatsapp', title: 'WhatsApp' };
+  const h = harness({ script: Array(70).fill(wa), judge, timing: { unclearMinutes: 2 } });
+  await h.run(40); // 10 minutes
+  assert.equal(h.c.status().label, 'unclear', 'still within the allowance');
+  await h.run(); // 7.5 more minutes: drift after 10, nudge 3 min later
+  assert.equal(asked, 0, 'messaging is never sent to the judge');
+  const drifts = h.said.filter((n) => n.kind === 'drift');
+  assert.equal(drifts.length, 1);
+  assert.ok(h.store.get().log.some((e) => e.type === 'drift' && /messaging \(whatsapp\)/.test(e.reason)));
+  // the quest can allow it ("reply to client on WhatsApp")
+  const ok = harness({ script: Array(70).fill(wa), quest: { allow: ['whatsapp'] } });
+  await ok.run();
+  assert.equal(ok.said.length, 0);
+});

@@ -16,6 +16,7 @@ export const DEFAULT_TIMING = {
   unclearMinutes: 6, // same unclear site/app this long -> ask the judge
   judgeCacheMinutes: 30, // a verdict holds this long for that site/app
   stuckMinutes: 25, // on task this long without finishing the step -> offer to split
+  commAllowanceMinutes: 10, // messaging apps count as drift only after this much continuous time
   morningHour: 6, eveningHour: 19,
   driftAfterSeconds: 180, minDriftAfter: 90, maxDriftAfter: 600, driftStep: 30,
 };
@@ -39,6 +40,7 @@ export function createCompanion({ store, watcher, makeBrain, ui, judge = null, c
   let lastNudgeContext = null;
   const verdicts = new Map(); // site key -> { label, until, reason } (judge cache)
   let unclearRun = null; // { key, since }
+  let commRun = null; // { since, lastAt } continuous messaging time
   let onTaskMs = 0; // on-task time since the last finished step (for "stuck")
   let lastChatNudgeAt = 0; // chat-drift nudges at most every 30 min
 
@@ -194,6 +196,15 @@ export function createCompanion({ store, watcher, makeBrain, ui, judge = null, c
 
   // --- judging unclear stretches -------------------------------------------
   async function maybeJudge(sample, c, at) {
+    // Messaging: a deterministic allowance, never sent to the judge. Short
+    // hops away (< 2 min) do not reset the clock.
+    if (c.comm) {
+      if (!commRun || at - commRun.lastAt > 2 * 60_000) commRun = { since: at, lastAt: at };
+      commRun.lastAt = at;
+      unclearRun = null;
+      if (at - commRun.since >= T.commAllowanceMinutes * 60_000) return { label: 'drift', reason: `messaging (${c.comm}) for ${T.commAllowanceMinutes}+ min`, match: { list: 'communication', keyword: c.comm } };
+      return c;
+    }
     if (c.label !== 'unclear' || c.neutral || !sample) { unclearRun = null; return c; }
     const key = siteKey(sample) || lower(sample.app);
     if (!key) return c;

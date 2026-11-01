@@ -94,3 +94,15 @@ test('store: atomic save survives reload', () => {
   assert.equal(again.get().log.at(-1).type, 'drift');
   assert.doesNotThrow(() => JSON.parse(readFileSync(path.join(dir, 'state.json'), 'utf8')));
 });
+
+test('store: batched saves coalesce many changes and flush() persists them', () => {
+  const dir = mkdtempSync(path.join(tmpdir(), 'bd-batch-'));
+  const store = createStore(dir, { debounceMs: 60_000 });
+  for (let i = 0; i < 50; i++) store.log('label', { i });
+  assert.equal(store.writes(), 0, 'nothing written yet');
+  store.flush();
+  assert.equal(store.writes(), 1, 'one write for 50 changes');
+  assert.equal(createStore(dir).get().log.length, 50);
+  store.flush();
+  assert.equal(store.writes(), 1, 'flush with nothing pending does not write');
+});

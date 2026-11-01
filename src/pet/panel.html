@@ -43,6 +43,13 @@
   .quest-row small { color: var(--muted); white-space: nowrap; }
   .muted { color: var(--muted); }
   .err { color: #fda4af; font-size: 12px; margin-top: 6px; }
+  details.new > summary { cursor: pointer; list-style: none; font-weight: 700; color: var(--mint); }
+  details.new > summary::-webkit-details-marker { display: none; }
+  .field { margin-top: 8px; }
+  .field label { display: block; font-size: 11px; color: var(--muted); margin-bottom: 3px; }
+  .field input, .field textarea, .field select { width: 100%; background: #0b1324; color: var(--text); border: 1px solid var(--line); border-radius: 8px; padding: 7px 8px; font: 13px "Segoe UI", sans-serif; }
+  .field textarea { resize: vertical; min-height: 64px; }
+  .two { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
 </style>
 </head>
 <body>
@@ -68,6 +75,21 @@
         <button class="act" id="a-pause">Pause</button>
       </div>
       <div class="err" id="err"></div>
+    </section>
+    <section class="card">
+      <details class="new" id="new-quest">
+        <summary>+ New quest</summary>
+        <form id="quest-form" autocomplete="off">
+          <div class="field"><label for="q-title">What are you working on?</label><input id="q-title" required maxlength="120" placeholder="Banafah in-store verification"></div>
+          <div class="field"><label for="q-steps">Tiny steps, one per line (first one under 2 minutes)</label><textarea id="q-steps" placeholder="Open Merchant Center&#10;Add store hours&#10;Request review"></textarea></div>
+          <div class="two">
+            <div class="field"><label for="q-deadline">Deadline (makes it a boss)</label><input id="q-deadline" type="date"></div>
+            <div class="field"><label for="q-tag">Skill</label><select id="q-tag"><option>Client Work</option><option>Code</option><option>Admin</option><option>Sales</option><option>Creative</option><option>Health</option><option>General</option></select></div>
+          </div>
+          <div class="field"><label for="q-allow">Words in window titles when you work on it (optional, comma separated)</label><input id="q-allow" placeholder="merchant center, banafah"></div>
+          <div class="row"><button class="act primary" type="submit" id="q-submit">Start quest</button></div>
+        </form>
+      </details>
     </section>
     <section class="card"><h3>Streak</h3><div id="streak" class="muted"></div></section>
     <section class="card"><h3>Skills</h3><div id="skills" class="muted">Finish a step to start levelling skills.</div></section>
