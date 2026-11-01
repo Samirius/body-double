@@ -12,10 +12,14 @@ $list = @(); $srt = @(); $t = 0.0; $i = 0
 function Ts([double]$s) { $ts = [TimeSpan]::FromSeconds($s); '{0:00}:{1:00}:{2:00},{3:000}' -f [int][math]::Floor($ts.TotalHours), $ts.Minutes, $ts.Seconds, $ts.Milliseconds }
 foreach ($m in $manifest) {
   $i++
-  $wav = Join-Path $Dir "say$($m.n).wav"
-  $synth.SetOutputToWaveFile($wav)
-  $synth.Speak($m.say)
-  $synth.SetOutputToNull()
+  # Your own recording wins: video/voice/<n>.wav (e.g. 03-01.wav), one per caption line.
+  $own = Join-Path (Split-Path -Parent $PSCommandPath) "voice\$($m.n).wav"
+  if (Test-Path $own) { $wav = $own } else {
+    $wav = Join-Path $Dir "say$($m.n).wav"
+    $synth.SetOutputToWaveFile($wav)
+    $synth.Speak($m.say)
+    $synth.SetOutputToNull()
+  }
   $dur = [double](& ffprobe -v error -show_entries format=duration -of csv=p=0 $wav)
   $pad = if ($m.last) { 0.9 } else { 0.25 }
   $len = [math]::Round($dur + $pad, 2)

@@ -1,22 +1,39 @@
-# Submission video — storyboard and narration (target 2:45)
+# Video script (about 2 min)
 
-Rule for every frame: **real renders and real numbers only.** The pet, bubble and panel shots come from
-`npm run test:pet` (the real app). The evidence slide is built from your real `state.json`; until the kill test has
-run it says "pending", never a made-up number.
+Every frame is real: app shots come from `npm run test:pet`, numbers come from `eval/` and your own log.
+`npm run video` builds `video/out/demo.mp4` + `.srt` with a computer voice.
 
-Build a draft any time: `npm run video` → `video/out/demo.mp4` + `.srt` (computer voice). For the final cut,
-record yourself reading the narration below (your voice is the story) and re-run with `--voice <your.wav>` per
-slide, or just replace the audio track.
+**Your own voice (optional, ~15 min):** record each line below as `video/voice/<id>.wav` (Windows Voice Recorder,
+export as WAV), then run `npm run video -- --reuse-shots`. Lines you skip keep the computer voice.
 
-| # | Time | On screen | Narration (read it in your own words) |
-|---|---|---|---|
-| 1 | 0:00 | Title + the familiar | I have ADHD. Every focus app I've tried waits for me to open it. I never do. So I built one that speaks first. |
-| 2 | 0:12 | Sprite sheet (6 poses × 4 stages) | Meet the familiar. It lives along the bottom of my screen, it sleeps when I'm away, it worries when I drift, and it celebrates when I finish something. |
-| 3 | 0:27 | Real nudge bubble | When I drift for a few minutes, it doesn't lecture me. It names my quest and gives me one next action I can do in under two minutes. Done, snooze, or "wrong nudge". |
-| 4 | 0:45 | Learning diagram | Wrong nudges and missed drifts teach it. YouTube can be fine for one quest and a trap for another, and it learns how long to wait before speaking up. |
-| 5 | 1:02 | Smarter watching | When it can't tell, it asks the model once and remembers. If I'm stuck on a step for 25 minutes, it offers a smaller one. It opens my day with a plan and closes it with what I won. |
-| 6 | 1:22 | Real cheer + panel | Progress is the game: XP for finished steps, never for time. Deadlines are bosses with health bars. Streaks forgive a missed day. The familiar evolves as I level up. |
-| 7 | 1:44 | MCP tools | I don't type commands anywhere. I tell Claude "I'm starting the Banafah verification" or "done with that", and it drives the companion through MCP tools. |
-| 8 | 2:00 | Built on pi + privacy | It's built on the pi agent runtime with Meta's models through pi's Meta provider. Window titles stay in memory, nothing is screenshotted unless I turn it on, and it runs locally. |
-| 9 | 2:18 | Evidence (real numbers or "pending") | Here is what actually happened when I used it: drifts caught, how fast I came back, steps finished. One person, honest numbers. |
-| 10 | 2:36 | Close | It's not a productivity app. It's a body double that speaks first. |
+| id | Line |
+|---|---|
+| 01-01 | I have ADHD. |
+| 01-02 | Every focus app I have tried waits for me to open it. |
+| 01-03 | I never do. |
+| 01-04 | So I built one that speaks first. |
+| 02-01 | This is the Nudgling. |
+| 02-02 | It lives on the bottom edge of my screen. |
+| 02-03 | It sleeps when I am away, it worries when I drift, and it celebrates when I finish something. |
+| 02-04 | And it grows as I level up. |
+| 03-01 | When I drift for a few minutes, it does not lecture me. |
+| 03-02 | It names my quest and gives me one next action I can do in under two minutes. |
+| 03-03 | If the distraction is a good idea, I park it for later. |
+| 04-01 | Click it, and it starts a focus session. |
+| 04-02 | A ring counts down around it. |
+| 04-03 | Then it sends me to drink water, and stays quiet during the break. |
+| 05-01 | Wrong nudges and missed drifts teach it. |
+| 05-02 | YouTube can be research for one quest and a trap for another. |
+| 05-03 | It also learns how long to wait before speaking up. |
+| 06-01 | Progress is the game. |
+| 06-02 | XP for finished steps, never for time. |
+| 06-03 | Deadlines are bosses with health bars, and streaks forgive a missed day. |
+| 07-01 | Under the hood, a pi agent writes every nudge. |
+| 07-02 | It uses Meta's Muse Spark in the cloud, and Meta's Llama running right on my PC when I am offline. |
+| 07-03 | A small local model decides whether a window fits my quest, so my screen never leaves the machine. |
+| 08-01 | And I never type commands. |
+| 08-02 | I tell Claude what I am starting, or that I am done, and it drives the Nudgling through M C P tools. |
+| 09-01 | I measured it, and I kept the failures. |
+| 09-02 | The first local model called Netflix work, so it caught none of my drifts, and I replaced it. |
+| 10-01 | It is not a productivity app. |
+| 10-02 | It is a body double that speaks first. |
