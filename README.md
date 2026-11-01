@@ -29,8 +29,9 @@ ask tiny, and makes progress visible, because visible progress is what keeps you
   day with a plan and closes it with what you won.
 - **Progress is the game.** XP only for finished steps (never for time, never from the model). Deadlines are
   bosses with HP bars. Streak shields forgive a missed day. Titles, skills, and four evolution stages.
-- **Works from Claude.** An MCP server lets you say "I'm starting the Banafah verification, steps are …" or
-  "done with that" in any Claude chat, and Claude drives the companion.
+- **Works from Claude.** Click **Connect Claude** in the HUD once (it backs up `~/.claude.json` first; a second
+  click undoes it). Then say "I'm starting the Banafah verification, steps are …" or "done with that" in any
+  Claude chat, and Claude drives the companion through MCP tools.
 
 ## Meta AI inside
 | Job | Model | Where it runs |
@@ -58,7 +59,7 @@ Optional cloud model: put `META_API_KEY=...` in `.env` (Muse Spark goes first, L
 
 Check it yourself:
 ```bash
-npm test               # 63 tests, no key and no model needed
+npm test               # 65 tests, no key and no model needed
 npm run test:pet       # launches the real app, drives it, saves 6 screenshots, checks them
 npm run eval:decider   # the local decision model on 40 labelled window titles
 ```

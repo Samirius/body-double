@@ -7,6 +7,7 @@
 //   npm run pet                     run
 //   npm run pet -- --selftest <dir> render, screenshot both windows, quit
 import { app, BrowserWindow, ipcMain, screen, Tray, Menu, nativeImage, globalShortcut, shell } from 'electron';
+import { connectClaude, claudeConnected } from '../claude-connect.js';
 import path from 'node:path';
 import { writeFileSync, mkdirSync, readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
@@ -94,6 +95,9 @@ async function act(name, payload = {}) {
       return client.call('POST', '/quests', { title, steps, allow, deadline, tag: str(payload.tag, 30) || 'General' });
     }
     case 'panel': return togglePanel();
+    // Only on a click in the HUD: the user asks for it; a backup is made first.
+    case 'connect-claude': return connectClaude({ remove: claudeConnected() });
+    case 'claude-status': return { connected: claudeConnected() };
     case 'stats': { const r = await client.call('GET', '/stats'); await shell.openPath(r.htmlPath); return r.totals; }
     default: throw new Error(`unknown action ${name}`);
   }

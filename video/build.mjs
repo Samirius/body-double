@@ -71,7 +71,7 @@ add(`<h2>// I JUST TALK TO CLAUDE</h2><pre class="code">"I'm starting the Banafa
 "park this idea for later"
   → companion_park           (saved to the vault)</pre>`,
   'And I never type commands. I tell Claude what I am starting, or that I am done, and it drives the Nudgling through M C P tools.');
-const ev = [`<div><b>63</b>automated tests pass</div>`, `<div><b>0</b>errors in a 20-min soak</div>`, `<div><b>0 / 15</b>drifts caught by the first local model</div>`];
+const ev = [`<div><b>65</b>automated tests pass</div>`, `<div><b>0</b>errors in a 20-min soak</div>`, `<div><b>0 / 15</b>drifts caught by the first local model</div>`];
 if (kevAt) ev.push(`<div><b>${15 - kevAt.missedDrifts} / 15</b>drifts caught by Kev, ${kevAt.falseNudges} wrong</div>`);
 if (writer) ev.push(`<div><b>${writer.byModelPct}%</b>nudges written by Llama on this PC, median ${(writer.medianMs / 1000).toFixed(1)} s</div>`);
 if (evidence) ev.push(`<div><b>${evidence.returns} / ${evidence.driftNudges}</b>real drifts turned around</div>`);

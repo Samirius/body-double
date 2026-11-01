@@ -99,6 +99,16 @@ $('a-import').onclick = run('import');
 $('a-stats').onclick = run('stats');
 $('close').onclick = () => window.bd.act('panel');
 
+// Connect Claude: adds the companion's tools to Claude Code (a second click removes them).
+const showClaude = (connected) => { $('a-claude').textContent = connected ? 'Claude: connected ✓' : 'Connect Claude'; $('a-claude').title = connected ? 'Click to disconnect' : 'Adds the companion tools to Claude Code (backs up ~/.claude.json first)'; };
+window.bd.act('claude-status').then((r) => r.ok && showClaude(r.data.connected));
+$('a-claude').onclick = async () => {
+  const r = await window.bd.act('connect-claude');
+  if (!r.ok) { $('err').textContent = r.error; return; }
+  showClaude(r.data.connected);
+  $('err').textContent = r.data.connected ? 'Connected. Start a new Claude chat to use it.' : 'Disconnected from Claude.';
+};
+
 let formTouched = false;
 // Only a real click counts as "touched"; programmatic open/close does not.
 $('new-quest').querySelector('summary').addEventListener('click', () => { formTouched = true; });

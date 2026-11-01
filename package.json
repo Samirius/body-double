@@ -4,7 +4,7 @@
   "description": "Nudgling: a proactive ADHD focus companion with a pixel pet that speaks first",
   "main": "index.js",
   "scripts": {
-    "test": "node --test test/core.test.js test/brain.test.js test/companion.test.js test/watcher.test.js test/learning.test.js test/smarter.test.js test/stats.test.js test/hook.test.js test/decider.test.js test/vault.test.js test/session.test.js test/decider-server.test.js test/pet.test.js test/integration.test.js",
+    "test": "node --test test/core.test.js test/brain.test.js test/companion.test.js test/watcher.test.js test/learning.test.js test/smarter.test.js test/stats.test.js test/hook.test.js test/decider.test.js test/vault.test.js test/session.test.js test/decider-server.test.js test/claude-connect.test.js test/pet.test.js test/integration.test.js",
     "start": "node src/cli.js",
     "daemon": "node src/daemon.js",
     "mcp": "node src/mcp.js",
