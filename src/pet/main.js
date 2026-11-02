@@ -29,8 +29,29 @@ const client = createClient({ env: process.env, nodePath: process.execPath });
 let pet = null, panel = null, fx = null, tray = null, unsubscribe = null, connected = false;
 const send = (channel, payload) => { for (const w of [pet, panel]) if (w && !w.isDestroyed()) w.webContents.send(channel, payload); };
 
+// Which screen the creature lives on (tray: "Move to next screen"); remembered
+// by display id, back to the primary screen if that one is unplugged.
+const displayFile = () => path.join(app.getPath('userData'), 'display.json');
+function homeDisplay() {
+  let id = null;
+  try { id = JSON.parse(readFileSync(displayFile(), 'utf8')).id; } catch { /* first run */ }
+  return screen.getAllDisplays().find((d) => d.id === id) || screen.getPrimaryDisplay();
+}
+function placeOn(display) {
+  const a = display.workArea;
+  pet?.setBounds({ x: a.x, y: a.y + a.height - STRIP_HEIGHT, width: a.width, height: STRIP_HEIGHT });
+  fx?.setBounds({ x: a.x, y: a.y, width: a.width, height: a.height });
+  panel?.setPosition(a.x + a.width - 380, a.y + a.height - STRIP_HEIGHT - 560 + 120);
+}
+function nextScreen() {
+  const all = screen.getAllDisplays(), cur = homeDisplay();
+  const next = all[(all.findIndex((d) => d.id === cur.id) + 1) % all.length];
+  try { writeFileSync(displayFile(), JSON.stringify({ id: next.id })); } catch { /* not remembered */ }
+  placeOn(next);
+}
+
 function createPet() {
-  const area = screen.getPrimaryDisplay().workArea;
+  const area = homeDisplay().workArea;
   pet = new BrowserWindow({
     x: area.x, y: area.y + area.height - STRIP_HEIGHT, width: area.width, height: STRIP_HEIGHT,
     transparent: true, frame: false, resizable: false, movable: false, hasShadow: false, skipTaskbar: true,
@@ -49,7 +70,7 @@ function createPet() {
 // the work area that never takes clicks or focus and is shown only while an
 // effect plays.
 function createFx() {
-  const area = screen.getPrimaryDisplay().workArea;
+  const area = homeDisplay().workArea;
   fx = new BrowserWindow({
     x: area.x, y: area.y, width: area.width, height: area.height,
     transparent: true, frame: false, resizable: false, movable: false, hasShadow: false, skipTaskbar: true,
@@ -62,7 +83,7 @@ function createFx() {
 }
 
 function createPanel() {
-  const area = screen.getPrimaryDisplay().workArea;
+  const area = homeDisplay().workArea;
   panel = new BrowserWindow({
     width: 360, height: 560, x: area.x + area.width - 380, y: area.y + area.height - STRIP_HEIGHT - 560 + 120,
     frame: false, resizable: false, alwaysOnTop: true, skipTaskbar: true, show: false, backgroundColor: '#0f172a',
@@ -84,6 +105,7 @@ function createTray() {
     { label: 'Pause / resume', click: () => act('pause-toggle') },
     { label: 'Snooze 10 minutes', click: () => act('snooze', { minutes: 10 }) },
     { label: 'Open stats page', click: () => act('stats').catch(() => {}) },
+    { label: 'Move to next screen', click: nextScreen },
     { type: 'separator' },
     { label: 'Quit pet (service keeps running)', click: () => app.quit() },
   ]));
@@ -335,6 +357,8 @@ app.whenReady().then(() => {
   createPet();
   createPanel();
   createFx();
+  // A screen unplugged or resized: settle on the remembered one (or the primary).
+  for (const ev of ['display-removed', 'display-added', 'display-metrics-changed']) screen.on(ev, () => placeOn(homeDisplay()));
   if (!SELFTEST_DIR) {
     createTray();
     globalShortcut.register('Control+Alt+D', () => act('done').catch(() => {}));
