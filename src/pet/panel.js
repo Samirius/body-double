@@ -121,6 +121,28 @@ $('a-import').onclick = run('import');
 $('a-stats').onclick = run('stats');
 $('close').onclick = () => window.bd.act('panel');
 
+// Settings card: saved in the service on every change (creature and agents see it too).
+const showSettings = (s) => {
+  $('s-delay').value = s.driftAfterSeconds; $('s-delay-v').textContent = `${Math.round(s.driftAfterSeconds / 6) / 10} min`;
+  $('s-qfrom').value = s.quietFrom ?? ''; $('s-qto').value = s.quietTo ?? '';
+  $('s-morning').value = s.morningHour; $('s-evening').value = s.eveningHour;
+  $('s-volume').value = s.volume; $('s-volume-v').textContent = `${s.volume}%`;
+  $('s-sound').checked = s.sound; $('s-fx').checked = s.fx;
+};
+window.bd.act('get-settings').then((r) => r.ok && showSettings(r.data));
+const saveSetting = (key, read) => async () => { const r = await window.bd.act('settings', { [key]: read() }); if (r.ok) showSettings(r.data); };
+const num = (id) => () => ($(id).value === '' ? null : Number($(id).value));
+$('s-delay').oninput = () => { $('s-delay-v').textContent = `${Math.round($('s-delay').value / 6) / 10} min`; };
+$('s-delay').onchange = saveSetting('driftAfterSeconds', num('s-delay'));
+$('s-qfrom').onchange = saveSetting('quietFrom', num('s-qfrom'));
+$('s-qto').onchange = saveSetting('quietTo', num('s-qto'));
+$('s-morning').onchange = saveSetting('morningHour', num('s-morning'));
+$('s-evening').onchange = saveSetting('eveningHour', num('s-evening'));
+$('s-volume').oninput = () => { $('s-volume-v').textContent = `${$('s-volume').value}%`; };
+$('s-volume').onchange = saveSetting('volume', num('s-volume'));
+$('s-sound').onchange = saveSetting('sound', () => $('s-sound').checked);
+$('s-fx').onchange = saveSetting('fx', () => $('s-fx').checked);
+
 // AI card: the model chain, and "Sign in with Meta" (Muse Spark, no key needed).
 const showAi = (s) => {
   $('ai-models').textContent = (s.models || 'templates').replace(/llama-local\/llama-3\.2-3b/, 'Llama 3.2 3B (this PC)').replace(/meta\/muse-spark[\w.-]*/, 'Muse Spark (Meta)').replace(/ -> /g, '  →  ') + '  →  templates';

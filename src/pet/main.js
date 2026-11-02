@@ -107,6 +107,8 @@ async function act(name, payload = {}) {
     case 'activate': return client.call('POST', '/quests/activate', { query: String(payload.query || '') });
     case 'quest-rename': return client.call('POST', '/quests/edit', { query: String(payload.query || ''), patch: { title: String(payload.title || '').slice(0, 120) } });
     case 'quest-remove': return client.call('POST', '/quests/remove', { query: String(payload.query || '') });
+    case 'settings': return client.call('POST', '/settings', payload || {});
+    case 'get-settings': return client.call('GET', '/settings');
     case 'scope-allow': return client.call('POST', '/scope/allow', {});
     case 'import': return client.call('POST', '/import/jarvis', {});
     case 'add-quest': {

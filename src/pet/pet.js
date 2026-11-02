@@ -5,7 +5,7 @@ import { petStage } from '../core/game.js';
 import { decidePose, createWanderer } from './behaviour.js';
 import { createFeelings } from './feelings.js';
 import { drawEmote, EMOTES } from './emotes.js';
-import { play } from './voice.js';
+import { play, setVolume } from './voice.js';
 
 const SCALE = 4, SPR = SIZE * SCALE, GROUND = 6, BUBBLE_W = 340;
 const canvas = document.getElementById('stage');
@@ -20,10 +20,9 @@ const HOLD = new URLSearchParams(location.search).has('hold');
 const QUIET = new URLSearchParams(location.search).has('quiet'); // self-test: no sound
 
 // --- feelings: emotes, robot sounds, full-screen effects ---------------------
-// SOUND and FX are switches in the creature's menu, remembered on this PC.
-const pref = (k, d) => { try { const v = localStorage.getItem(`bd.${k}`); return v == null ? d : v === '1'; } catch { return d; } };
-const setPref = (k, v) => { try { localStorage.setItem(`bd.${k}`, v ? '1' : '0'); } catch { /* not remembered */ } };
-const prefs = { sound: pref('sound', true), fx: pref('fx', true) };
+// SOUND, FX and volume are settings in the service (creature menu, HUD, agents).
+const prefs = { sound: true, fx: true };
+function applySettings(s) { if (!s) return; prefs.sound = s.sound !== false; prefs.fx = s.fx !== false; setVolume(s.volume ?? 60); showPrefs(); }
 const feelings = createFeelings();
 function react(r) {
   if (!r) return;
@@ -145,8 +144,8 @@ $('m-stop').onclick = async () => { toggleMenu(false); await act('session', { ac
 $('m-hud').onclick = () => { toggleMenu(false); act('panel'); };
 $('m-quest').onclick = () => { toggleMenu(false); askQuest(); };
 const showPrefs = () => { $('m-sound').textContent = `SOUND ${prefs.sound ? 'ON' : 'OFF'}`; $('m-fx').textContent = `FX ${prefs.fx ? 'ON' : 'OFF'}`; };
-$('m-sound').onclick = () => { prefs.sound = !prefs.sound; setPref('sound', prefs.sound); showPrefs(); if (prefs.sound && !QUIET) play('happy'); };
-$('m-fx').onclick = () => { prefs.fx = !prefs.fx; setPref('fx', prefs.fx); showPrefs(); };
+$('m-sound').onclick = async () => { const r = await act('settings', { sound: !prefs.sound }); if (r.ok) { applySettings(r.data); if (prefs.sound && !QUIET) play('happy'); } };
+$('m-fx').onclick = async () => { const r = await act('settings', { fx: !prefs.fx }); if (r.ok) applySettings(r.data); };
 showPrefs();
 
 // --- transmission bubble ---------------------------------------------------
@@ -292,6 +291,7 @@ async function refreshStatus() {
   state.stage = petStage(r.data.level.level);
   state.session = r.data.session || null;
   state.flow = r.data.flow || null;
+  applySettings(r.data.settings);
   state.quiet = !!r.data.quiet; state.fullscreen = !!r.data.fullscreen;
   applyGlow();
   // First run (or every quest finished): ask once per launch instead of nudging about nothing.
@@ -310,6 +310,7 @@ window.bd.onEvent((ev) => {
     if (typeof ev.quiet === 'boolean') state.quiet = ev.quiet;
     if (typeof ev.fullscreen === 'boolean') state.fullscreen = ev.fullscreen;
     if (ev.flow) state.flow = ev.flow;
+    if (ev.settings) applySettings(ev.settings);
     applyGlow();
     return;
   }

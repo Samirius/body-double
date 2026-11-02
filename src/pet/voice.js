@@ -6,6 +6,9 @@ let ac = null;
 const audio = () => (ac ||= new AudioContext());
 // The video build renders the same sounds into an OfflineAudioContext.
 export function useAudioContext(context) { ac = context; }
+// Volume setting 0-100; 60 is the designed level.
+let level = 1;
+export function setVolume(v) { level = Math.max(0, Math.min(100, Number(v) || 0)) / 60; }
 
 // One gliding tone: frequency moves f0 -> f1 (-> f2) over `dur` seconds.
 function tone({ type = 'sine', f0, f1 = f0, f2 = null, dur = 0.15, at = 0, vol = 1, vibrato = 0, tremolo = 0, lowpass = 0 }) {
@@ -20,7 +23,7 @@ function tone({ type = 'sine', f0, f1 = f0, f2 = null, dur = 0.15, at = 0, vol =
   gain.gain.linearRampToValueAtTime(vol, t + 0.02);
   gain.gain.setValueAtTime(vol, t + dur * 0.7);
   gain.gain.linearRampToValueAtTime(0, t + dur);
-  master.gain.value = 0.08;
+  master.gain.value = 0.08 * level;
   let node = osc;
   if (lowpass) { const f = a.createBiquadFilter(); f.type = 'lowpass'; f.frequency.value = lowpass; node.connect(f); node = f; }
   node.connect(gain).connect(master).connect(a.destination);
@@ -39,7 +42,7 @@ function noise({ dur = 0.6, at = 0, from = 2400, to = 120 }) {
   const src = a.createBufferSource(), f = a.createBiquadFilter(), g = a.createGain();
   src.buffer = buf; f.type = 'lowpass';
   f.frequency.setValueAtTime(from, t); f.frequency.exponentialRampToValueAtTime(to, t + dur);
-  g.gain.value = 0.12;
+  g.gain.value = 0.12 * level;
   src.connect(f).connect(g).connect(a.destination);
   src.start(t);
 }

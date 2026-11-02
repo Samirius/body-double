@@ -34,6 +34,16 @@ export function createCompanion({ store, watcher, makeBrain, ui, judge = null, c
   const log = (type, data = {}) => store.log(type, data, now());
   const T = { ...DEFAULT_TIMING, ...timing, ...(driftOptions.driftAfterSeconds ? { driftAfterSeconds: driftOptions.driftAfterSeconds } : {}) };
   const driftAfter = () => store.get().settings?.driftAfterSeconds ?? T.driftAfterSeconds;
+  // User settings (HUD Settings card, creature menu, agents): one place, the store.
+  const SETTINGS = { driftAfterSeconds: 180, quietFrom: null, quietTo: null, morningHour: T.morningHour, eveningHour: T.eveningHour, sound: true, fx: true, volume: 60 };
+  const setting = (k) => store.get().settings?.[k] ?? SETTINGS[k];
+  // Quiet hours (e.g. 22 -> 7): nothing speaks unless you asked for it.
+  const inQuietHours = (at) => {
+    const from = setting('quietFrom'), to = setting('quietTo');
+    if (from == null || to == null || from === to) return false;
+    const h = new Date(at).getHours();
+    return from < to ? h >= from && h < to : h >= from || h < to;
+  };
   const drift = createDriftTracker({ ...driftOptions, driftAfterSeconds: driftAfter });
   let lastLabel = null, lastNudgeAt = null, timer = null, busy = false, lastTickAt = null;
   // Recent samples, in memory only (titles never reach disk): used to learn
@@ -140,7 +150,7 @@ export function createCompanion({ store, watcher, makeBrain, ui, judge = null, c
   // Things the user asked for themselves still answer during a call; nothing else interrupts it.
   const ASKED_FOR = new Set(['plan', 'session-start', 'session-end', 'scope']);
   async function speak(kind, event) {
-    if (quiet && !ASKED_FOR.has(kind)) { log('quiet-skip', { kind }); return; }
+    if ((quiet || inQuietHours(now())) && !ASKED_FOR.has(kind)) { log('quiet-skip', { kind }); return; }
     const quest = store.activeQuest();
     currentNudgeKind = kind;
     try { await brain.handle({ quest, nextStep: nextStep(quest), event, stats: store.get().nudges }); } finally { currentNudgeKind = 'drift'; }
@@ -264,11 +274,11 @@ export function createCompanion({ store, watcher, makeBrain, ui, judge = null, c
     if (label === 'away') return;
     const d = new Date(at), today = dayKey(at), hour = d.getHours();
     const b = store.get().bookends || {};
-    if (hour >= T.morningHour && hour < 12 && b.morning !== today) {
+    if (hour >= setting('morningHour') && hour < 12 && b.morning !== today) {
       store.update((st) => ({ ...st, bookends: { ...(st.bookends || {}), morning: today } }));
       await speak('morning', { type: 'morning', summary: morningSummary() });
     }
-    if (hour >= T.eveningHour && b.evening !== today) {
+    if (hour >= setting('eveningHour') && b.evening !== today) {
       const summary = eveningSummary(dayActivity(today));
       store.update((st) => ({ ...st, bookends: { ...(st.bookends || {}), evening: today } }));
       if (summary) await speak('evening', { type: 'evening', summary });
@@ -456,6 +466,23 @@ export function createCompanion({ store, watcher, makeBrain, ui, judge = null, c
     planQuest,
     scopeCheck,
     allowScope,
+    settings: () => ({ ...SETTINGS, ...(store.get().settings || {}) }),
+    // Validated, so a bad value from any client can't break the loop.
+    updateSettings(patch = {}) {
+      const int = (v, lo, hi) => (v == null || v === '' ? null : Math.max(lo, Math.min(hi, Math.round(Number(v)))));
+      const clean = {};
+      if ('driftAfterSeconds' in patch) clean.driftAfterSeconds = int(patch.driftAfterSeconds, T.minDriftAfter, T.maxDriftAfter) ?? SETTINGS.driftAfterSeconds;
+      for (const k of ['quietFrom', 'quietTo']) if (k in patch) clean[k] = int(patch[k], 0, 23);
+      if ('morningHour' in patch) clean.morningHour = int(patch.morningHour, 0, 12) ?? SETTINGS.morningHour;
+      if ('eveningHour' in patch) clean.eveningHour = int(patch.eveningHour, 12, 23) ?? SETTINGS.eveningHour;
+      for (const k of ['sound', 'fx']) if (k in patch) clean[k] = !!patch[k];
+      if ('volume' in patch) clean.volume = int(patch.volume, 0, 100) ?? SETTINGS.volume;
+      store.update((st) => ({ ...st, settings: { ...(st.settings || {}), ...clean } }));
+      log('settings', { keys: Object.keys(clean) });
+      const all = { ...SETTINGS, ...store.get().settings };
+      ui.status?.({ label: lastLabel, settings: all });
+      return all;
+    },
     vault: () => store.get().vault || [],
     unpark(id) {
       const before = (store.get().vault || []).length;
@@ -543,7 +570,7 @@ export function createCompanion({ store, watcher, makeBrain, ui, judge = null, c
     status() {
       const st = store.get();
       const quest = store.activeQuest();
-      return { flow: rhythm.flow(), quiet, fullscreen, session: st.session || null, paused: st.paused, pausedUntil: st.pausedUntil || null, label: lastLabel, quest: quest && { title: quest.title, next: nextStep(quest)?.text || null, boss: quest.boss ? bossHp(quest) : null }, level: levelProgress(st.game.xp.total), skills: st.game.xp.skills, titles: st.game.titles, streak: st.game.streak, nudges: st.nudges, nudgeAfterSeconds: driftAfter(), judge: judge?.mode || 'off', today: dayActivity() };
+      return { settings: { ...SETTINGS, ...(st.settings || {}) }, flow: rhythm.flow(), quiet, fullscreen, session: st.session || null, paused: st.paused, pausedUntil: st.pausedUntil || null, label: lastLabel, quest: quest && { title: quest.title, next: nextStep(quest)?.text || null, boss: quest.boss ? bossHp(quest) : null }, level: levelProgress(st.game.xp.total), skills: st.game.xp.skills, titles: st.game.titles, streak: st.game.streak, nudges: st.nudges, nudgeAfterSeconds: driftAfter(), judge: judge?.mode || 'off', today: dayActivity() };
     },
   };
 }

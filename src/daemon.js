@@ -90,6 +90,8 @@ const routes = {
   },
   // Scope guard: "is this new request part of the quest?" (agents call it), and
   // "it's part of it" for the side task last pointed out.
+  'GET /settings': () => companion.settings(),
+  'POST /settings': (b) => companion.updateSettings(b || {}),
   'POST /scope/check': (b) => companion.scopeCheck(String(b.request || '')),
   'POST /scope/allow': () => companion.allowScope(),
   'POST /quests/activate': (b) => {
