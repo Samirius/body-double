@@ -1,8 +1,8 @@
 #!/usr/bin/env node
 // Downloads the local models into vendor/ (git-ignored) from their official
 // sources and checks every file against a pinned SHA-256. Run it once:
-//   npm run setup:models          llama.cpp + Kev-0.8B (decisions) + Llama 3.2 3B (words), ~3 GB
-//   npm run setup:models -- --all  also Kev-4B and Julia-1 (for the decider eval)
+//   npm run setup:models          llama.cpp + Meta Llama 3.2 3B (words and judging), ~2 GB
+//   npm run setup:models -- --all  also the decision models Kev and Julia (for the decider eval)
 // It only downloads and unpacks; the service starts the models itself.
 import { createHash } from 'node:crypto';
 import { createReadStream, createWriteStream, existsSync, mkdirSync, renameSync, rmSync } from 'node:fs';
@@ -18,7 +18,7 @@ const hf = (repo, file) => `https://huggingface.co/${repo}/resolve/main/${file}`
 
 const FILES = [
   { name: 'llama.cpp b11701 (Windows CPU)', file: 'llama-b11701-bin-win-cpu-x64.zip', url: 'https://github.com/ggml-org/llama.cpp/releases/download/b11701/llama-b11701-bin-win-cpu-x64.zip', sha256: '2cf9ad0c3bb449386ccae1b31ed091821a9aa773def9dbb94569deaed51d6dfe', unzipTo: 'llama' },
-  { name: 'Kev-0.8B (decision model, Apache-2.0)', file: 'models/Kev-0.8B-Q8_0.gguf', url: hf('ggml-org/Kev-0.8B-GGUF', 'Kev-0.8B-Q8_0.gguf'), sha256: '27278f34eb3273bceea4c053dc50dd61a5161da21a718c4aacdf8fd5830771d0' },
+  { name: 'Kev-0.8B (decision model, off by default: it measured at chance)', file: 'models/Kev-0.8B-Q8_0.gguf', url: hf('ggml-org/Kev-0.8B-GGUF', 'Kev-0.8B-Q8_0.gguf'), sha256: '27278f34eb3273bceea4c053dc50dd61a5161da21a718c4aacdf8fd5830771d0', optional: true },
   { name: 'Llama 3.2 3B Instruct (Meta, Llama 3.2 Community License)', file: 'models/Llama-3.2-3B-Instruct-Q4_K_M.gguf', url: hf('bartowski/Llama-3.2-3B-Instruct-GGUF', 'Llama-3.2-3B-Instruct-Q4_K_M.gguf'), sha256: '6c1a2b41161032677be168d354123594c0e6e67d2b9227c84f296ad037c728ff' },
   { name: 'Kev-4B (bigger decision model)', file: 'models/Kev-4B-Q4_K_M.gguf', url: hf('ggml-org/Kev-4B-GGUF', 'Kev-4B-Q4_K_M.gguf'), sha256: '33ae6b18926502b2209a1bf7d3b61a350d65938441515c686bb87d226a19eff9', optional: true },
   { name: 'Julia-1 (small decision model)', file: 'models/Julia-1-Q8_0.gguf', url: hf('ggml-org/Julia-1-GGUF', 'Julia-1-Q8_0.gguf'), sha256: '1ea6a7e87156eeeda88cb7a36a61265b37ba7b993897b7289b99aea5b5e47069', optional: true },

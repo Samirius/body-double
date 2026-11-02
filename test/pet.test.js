@@ -76,3 +76,11 @@ test('behaviour: wanderer rests, walks to a target, stays inside the strip, stop
   wd.step(5); wd.step(0.1, { canMove: false });
   assert.equal(wd.moving(), false);
 });
+
+test('pet: dropped somewhere, it stays and only strolls nearby', () => {
+  const wd = createWanderer({ width: () => 1920, sprite: 96, restMin: 0.1, restMax: 0.2, random: () => 0.99, start: 1500 });
+  wd.place(300);
+  assert.equal(wd.x(), 300);
+  for (let i = 0; i < 400; i++) wd.step(0.1);
+  assert.ok(wd.x() <= 300 + 180 && wd.x() >= 300 - 180, `strolled to ${wd.x()}`);
+});

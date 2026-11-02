@@ -330,6 +330,17 @@ async function selftest() {
     if (sideButton !== 'Part of it') throw new Error('side-task bubble has no "Part of it" button');
     await shot(pet, '10-pet-side-task');
     await pet.webContents.executeJavaScript("document.getElementById('b-ok').click(); document.getElementById('bubble').style.display = 'none'; 0");
+    // Drag it 400 px to the left with real mouse input: press, move, release.
+    const petX = () => pet.webContents.executeJavaScript('window.__petX()');
+    const from = Math.round(await petX()) + 48, y = STRIP_HEIGHT - 40;
+    const mouse = (type, x) => pet.webContents.sendInputEvent({ type, x, y, button: 'left', clickCount: 1 });
+    mouse('mouseMove', from); await wait(100);
+    mouse('mouseDown', from); await wait(50);
+    for (let dx = 0; dx <= 400; dx += 40) { mouse('mouseMove', from - dx); await wait(30); }
+    mouse('mouseUp', from - 400); await wait(300);
+    const moved = Math.round(from - 48 - (await petX()));
+    step('drag', { moved });
+    if (Math.abs(moved - 400) > 60) throw new Error(`dragging moved the creature ${moved}px, expected ~400`);
     panel.show(); panel.webContents.send('bd:refresh');
     await wait(1500);
     await shot(panel, '4-panel');

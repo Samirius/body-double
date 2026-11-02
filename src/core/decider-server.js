@@ -50,6 +50,10 @@ export async function ensureModelServer({ root, name, port, args = [], log = () 
   return { name, url, child };
 }
 
-export const ensureDeciderServer = ({ name = 'kev-4b', port = 18090, ...o }) => ensureModelServer({ name, port, ...o });
+// --sleep-idle-seconds: llama.cpp frees the model's memory after 5 idle minutes
+// and reloads it (a few seconds) on the next request, so an always-on
+// companion doesn't hold gigabytes while you work.
+const SLEEP = ['--sleep-idle-seconds', '300'];
+export const ensureDeciderServer = ({ name = 'kev-4b', port = 18090, ...o }) => ensureModelServer({ name, port, args: SLEEP, ...o });
 // --jinja: the model's own chat template, which carries Llama's tool calling.
-export const ensureWriterServer = ({ name = 'llama-3.2-3b', port = 18091, ...o }) => ensureModelServer({ name, port, args: ['--jinja', '-c', '4096'], ...o });
+export const ensureWriterServer = ({ name = 'llama-3.2-3b', port = 18091, ...o }) => ensureModelServer({ name, port, args: ['--jinja', '-c', '4096', ...SLEEP], ...o });

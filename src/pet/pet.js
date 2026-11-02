@@ -18,6 +18,7 @@ const wander = createWanderer({ width: () => innerWidth, sprite: SPR });
 // Recording the demo clips: stay in one spot so the crop keeps the creature.
 const HOLD = new URLSearchParams(location.search).has('hold');
 const QUIET = new URLSearchParams(location.search).has('quiet'); // self-test: no sound
+if (QUIET) window.__petX = () => wander.x(); // lets the self-test check a real drag
 
 // --- feelings: emotes, robot sounds, full-screen effects ---------------------
 // SOUND, FX and volume are settings in the service (creature menu, HUD, agents).
@@ -267,7 +268,28 @@ function floater(text, kind = '') {
 
 // --- click-through: interactive only over the pet or the bubble -------------
 let interactive = false;
+// Drag the creature along the bottom of the screen; a press without moving is a click (menu).
+let drag = null; // { offset, startX, moved }
+canvas.addEventListener('mousedown', (e) => {
+  const px = wander.x();
+  if (e.button !== 0 || e.clientX < px || e.clientX > px + SPR) return;
+  drag = { offset: e.clientX - px, startX: e.clientX, moved: false };
+  document.body.style.cursor = 'grabbing';
+});
+addEventListener('mouseup', (e) => {
+  if (!drag) return;
+  const wasClick = !drag.moved;
+  drag = null;
+  document.body.style.cursor = 'grab';
+  if (wasClick) toggleMenu();
+  else react({ emote: 'heart', voice: 'ooh' });
+});
 addEventListener('mousemove', (e) => {
+  if (drag) {
+    if (Math.abs(e.clientX - drag.startX) > 4) drag.moved = true;
+    if (drag.moved) wander.place(Math.max(0, Math.min(innerWidth - SPR, e.clientX - drag.offset)));
+    return; // stay interactive while dragging
+  }
   const px = wander.x(), py = canvas.height - SPR - GROUND;
   const overPet = e.clientX >= px + 8 && e.clientX <= px + SPR - 8 && e.clientY >= py + 16 && e.clientY <= py + SPR;
   const b = bubble.style.display === 'block' ? bubble.getBoundingClientRect() : null;
@@ -275,11 +297,7 @@ addEventListener('mousemove', (e) => {
   const m = menu.style.display === 'flex' ? menu.getBoundingClientRect() : null;
   const overMenu = !!m && e.clientX >= m.left && e.clientX <= m.right && e.clientY >= m.top && e.clientY <= m.bottom;
   const want = overPet || overBubble || overMenu;
-  if (want !== interactive) { interactive = want; window.bd.setInteractive(want); document.body.style.cursor = overPet ? 'pointer' : 'default'; }
-});
-canvas.addEventListener('click', (e) => {
-  const px = wander.x();
-  if (e.clientX >= px && e.clientX <= px + SPR) toggleMenu();
+  if (want !== interactive) { interactive = want; window.bd.setInteractive(want); document.body.style.cursor = overPet ? 'grab' : 'default'; }
 });
 
 // --- live events -----------------------------------------------------------

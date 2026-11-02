@@ -14,8 +14,19 @@ const baseUrl = process.argv[2] || process.env.BD_DECIDER_URL || 'http://127.0.0
 const modelId = process.argv[3] || process.env.BD_DECIDER_MODEL || 'julia-1';
 const { quests, cases } = JSON.parse(readFileSync(path.join(root, 'eval', 'decider', 'cases.json'), 'utf8'));
 
-// Threshold 0 returns the raw top choice; thresholds are applied afterwards.
-const decider = createDecider({ baseUrl, modelId, threshold: 0 });
+// --llm: judge with a chat model (Llama on this PC) through the pi agent's
+// verdict tool instead of a decision model. It answers on-task / off-task /
+// unsure with no probability, so its verdicts count as p = 1.
+const LLM = process.argv.includes('--llm');
+let decider;
+if (LLM) {
+  const { createJudge, createLlamaHandle } = await import('../src/agent/brain.js');
+  const judge = createJudge({ modelHandle: await createLlamaHandle(baseUrl), mode: 'title' });
+  decider = { judge: async (a) => { const t0 = Date.now(); const r = await judge.judge(a); return { ...r, choice: r.verdict, probability: r.verdict === 'unsure' ? 0 : 1, ms: Date.now() - t0 }; } };
+} else {
+  // Threshold 0 returns the raw top choice; thresholds are applied afterwards.
+  decider = createDecider({ baseUrl, modelId, threshold: 0 });
+}
 const rows = [];
 for (const c of cases) {
   const q = quests[c.quest];

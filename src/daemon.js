@@ -20,9 +20,11 @@ import { fileURLToPath } from 'node:url';
 if (existsSync('.env')) process.loadEnvFile('.env');
 const env = process.env;
 const PORT = Number(env.BD_PORT) || 47821;
-// Kev-0.8B by default: a 14 GB PC also runs Llama 3B and everything else.
-// Kev-4B (BD_DECIDER=kev-4b) only if the eval shows it earns its 3 GB.
-const DEFAULT_DECIDER = 'kev';
+// No decision model by default: measured on eval/decider/cases.json, Julia-1
+// caught 0/15 drifts and Kev-0.8B answered at chance (p 0.50-0.68), so they
+// cost memory for nothing. Unclear windows go to Llama's judge instead (it
+// runs anyway). BD_DECIDER=kev | kev-4b | julia turns one on to experiment.
+const DEFAULT_DECIDER = 'off';
 const JARVIS_NOW =env.BD_JARVIS_NOW || 'D:\\Samir-Second-Brain\\work\\NOW.generated.md';
 
 // Server-sent events: the pet (or anything local) subscribes to /events.
