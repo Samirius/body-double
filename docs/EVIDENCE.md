@@ -47,7 +47,21 @@ at a safe threshold it caught **no** drifts. Two findings shaped the code:
   uncertainty comes from the probability.
 - Adding "minutes in this window" as an extra field flipped clear drifts to "work", so it is not sent.
 
-**Kev (0.8B / 4B):** <!-- KEV --> pending the first run with the models on (see the README).
+**The replacements failed too, 2026-11-02** (`results-kev.json`, `results-llama-3.2-3b.json`):
+
+| Judge | Accuracy (clear cases) | False nudges | Missed drifts (of 15) | Median time |
+|---|---|---|---|---|
+| Kev-0.8B, threshold 0.5 | 65% | 3 | 11 | 3.5 s |
+| Kev-0.8B, threshold 0.75 | – (unsure on all 40) | 0 | 15 | 3.5 s |
+| Llama 3.2 3B as judge (`--llm`) | 38% | 3 | 12 | 23 s |
+
+Kev answered every case with 50–68% confidence, which is chance level. Llama called a football site "on task"
+for a WooCommerce quest and the WooCommerce checkout page "off task" for the checkout quest.
+
+**Decision:** on this hardware no local model is trusted to judge windows. They are off by default. Drift
+detection is rules plus your feedback ("wrong" / "missed it" learn per quest). Same-site side tasks use a rule:
+pages from the quest's first 10 minutes are its scope, a new page held 6+ minutes gets one question, and your
+answer teaches it. A cloud model (Muse Spark) judges only when you sign in.
 
 ## 4. Nudge writer: Llama 3.2 3B on this PC
 <!-- WRITER --> pending the first run with the models on. `npm run eval:writer` runs eight fixed events (drift, second

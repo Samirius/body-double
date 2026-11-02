@@ -28,7 +28,11 @@ export async function createApp({ env = process.env, ui, log = console.log }) {
   const modelHandle = modelHandles[0] || null;
   // BD_JUDGE: local (a decision model on this PC, see agent/decider.js; the
   // default when BD_DECIDER_URL is set) | title | screenshot | off.
-  const judgeMode = (env.BD_JUDGE || (env.BD_DECIDER_URL ? 'local' : 'title')).toLowerCase();
+  // A model on this PC is not trusted to judge by default: measured on
+  // eval/decider/cases.json, Llama 3.2 3B was right 38% of the time and took
+  // ~23 s a decision. Rules plus your feedback decide instead; a cloud model
+  // (Muse Spark) judges when you have one.
+  const judgeMode = (env.BD_JUDGE || (env.BD_DECIDER_URL ? 'local' : modelHandle && !modelHandle.local ? 'title' : 'off')).toLowerCase();
   const judge = judgeMode === 'local'
     ? createDecider({ baseUrl: env.BD_DECIDER_URL || 'http://127.0.0.1:18090/v1', modelId: env.BD_DECIDER_MODEL || 'julia-1', threshold: Number(env.BD_DECIDER_THRESHOLD) || 0.75, allowRemote: env.BD_DECIDER_ALLOW_REMOTE === '1', log: (t, d) => store.log(t, d) })
     : createJudge({ modelHandle, mode: judgeMode, log: (t, d) => store.log(t, d) });

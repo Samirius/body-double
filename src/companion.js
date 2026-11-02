@@ -64,6 +64,7 @@ export function createCompanion({ store, watcher, makeBrain, ui, judge = null, c
   let gitCheckedAt = 0, lastScopeWarnAt = 0;
   let sideRun = null; // { key, since } current page context of the active quest
   const sideVerdicts = new Map(); // "<questId>|<page key>" -> 'in-scope' | 'side-task'
+  const homeScope = new Map(); // questId -> { since, keys } pages of its first 10 on-task minutes
   let lastSide = null; // { questId, key } the side task last pointed out (for "it's part of it")
 
   const nextStep = (q) => q?.steps.find((s) => !s.done) || null;
@@ -364,18 +365,30 @@ export function createCompanion({ store, watcher, makeBrain, ui, judge = null, c
         await speak('scope', { type: 'scope', reason: 'uncommitted', files: g.files, lines: g.lines, minutes: g.lastCommitMinutes });
       }
     }
-    // 2. Same site, different job: 4+ minutes on a page context the decider says isn't this quest.
-    if (c.label !== 'on-task' || !judge || judge.mode === 'off') { sideRun = null; return; }
+    // 2. Same site, different job. Without trusting a model: the pages you work
+    //    on in a quest's first 10 on-task minutes are its scope; a new page you
+    //    stay on for 6+ minutes after that gets one "side task?" question, and
+    //    your answer ("part of it" / park) teaches it. A cloud judge, when
+    //    present, can clear it first.
+    if (c.label !== 'on-task') { sideRun = null; return; }
     const key = pageKey(sample);
-    if (!key || (quest.scopeAllow || []).includes(key)) { sideRun = null; return; }
+    if (!key) { sideRun = null; return; }
+    const home = homeScope.get(quest.id) || { since: at, keys: new Set() };
+    homeScope.set(quest.id, home);
+    if (at - home.since < 10 * 60_000) { home.keys.add(key); sideRun = null; return; }
+    if (home.keys.has(key) || (quest.scopeAllow || []).includes(key)) { sideRun = null; return; }
     const vkey = `${quest.id}|${key}`;
     if (sideVerdicts.has(vkey)) return;
     if (!sideRun || sideRun.key !== key) { sideRun = { key, since: at }; return; }
-    if (at - sideRun.since < 4 * 60_000) return;
-    const r = await judge.judge({ quest, nextStep: nextStep(quest), sample, minutes: Math.round((at - sideRun.since) / 60_000) });
-    const verdict = r.verdict === 'off-task' ? 'side-task' : 'in-scope';
+    if (at - sideRun.since < 6 * 60_000) return;
+    let verdict = 'side-task', source = 'rule';
+    if (judge && judge.mode !== 'off') {
+      const r = await judge.judge({ quest, nextStep: nextStep(quest), sample, minutes: Math.round((at - sideRun.since) / 60_000) });
+      if (r.verdict === 'on-task') verdict = 'in-scope';
+      source = r.source;
+    }
     sideVerdicts.set(vkey, verdict);
-    log('side-judged', { verdict, source: r.source });
+    log('side-judged', { verdict, source });
     if (verdict === 'side-task') {
       lastSide = { questId: quest.id, key };
       await speak('side-task', { type: 'side-task', where: key });

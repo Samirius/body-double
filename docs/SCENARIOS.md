@@ -27,14 +27,14 @@ How Nudgling behaves in real days. Each scenario says what you do, what it does,
    combo; an aura grows behind the creature (**FLOW ×3** at 15 min).
 2. A customer emails about an order. You open *Orders ‹ My Shop — WooCommerce*, then an order, then the
    checkout settings. It's still "WordPress", so a keyword blocker would say you're working.
-3. After 4 minutes on the new page, the local decision model is asked once: "is *orders* part of *Edit the
-   Elementor home page*?" → no. **"Side task? This looks like 'orders', not 'Edit the Elementor home page'."**
+3. *Orders* wasn't among the pages of the quest's first 10 minutes, and you've stayed on it for 6 minutes:
+   **"Side task? This looks like 'orders', not 'Edit the Elementor home page'."**
    Buttons: **Park it** (saved to the vault) or **Part of it** (that page joins this quest's scope and is never
    asked again).
 
 *Tests:* `scope-guard.test.js` (Elementor → orders, "part of it" learning), `rhythm-scope.test.js` (page keys
-merge "Order #1043" and "Order #1044"). Needs the local decision model running (Kev); without it, side tasks
-aren't detected.
+merge "Order #1043" and "Order #1044"). No model needed: pages from the quest's first 10 minutes are its
+scope, and a new page held 6+ minutes gets one question; your answer teaches it.
 
 ## 3. No agent at all: studying or writing
 

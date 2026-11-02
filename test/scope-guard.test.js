@@ -74,15 +74,33 @@ test('scenario: Elementor page edit -> WooCommerce orders on the same site is ca
   // Fake local decider: anything that isn't the Elementor page is another job.
   const judge = { mode: 'local', judge: async ({ sample }) => { judged.push(sample.title); return { verdict: /elementor/i.test(sample.title) ? 'on-task' : 'off-task', source: 'local' }; } };
   const h = setup({ window: () => w, judge });
-  await h.run(6);
+  await h.run(11); // the first 10 on-task minutes define the quest's pages
   w = { app: 'brave', title: 'Orders ‹ My Shop — WooCommerce - Brave' };
-  await h.run(6);
+  await h.run(7);
   const side = h.said.find((n) => n.kind === 'side-task');
   assert.ok(side, 'side task pointed out');
   assert.match(side.message, /orders/);
   assert.equal(h.said.filter((n) => n.kind === 'side-task').length, 1, 'once per page, not every tick');
   assert.deepEqual(h.c.allowScope(), { allowed: 'orders' });
   assert.ok(h.store.activeQuest().scopeAllow.includes('orders'));
+});
+
+test('scenario: with no model at all, a new page held 6+ minutes after the start gets one "side task?"; pages from the start never do', async () => {
+  let w = { app: 'brave', title: 'Edit Page “Home” ‹ My Shop — Elementor - Brave' };
+  const h = setup({ window: () => w });
+  await h.run(4);
+  w = { app: 'brave', title: 'Media Library ‹ My Shop — WordPress - Brave' }; // part of the job, seen early
+  await h.run(4);
+  w = { app: 'brave', title: 'Edit Page “Home” ‹ My Shop — Elementor - Brave' };
+  await h.run(4);
+  w = { app: 'brave', title: 'Media Library ‹ My Shop — WordPress - Brave' };
+  await h.run(8);
+  assert.equal(h.said.filter((n) => n.kind === 'side-task').length, 0, 'early pages are in scope');
+  w = { app: 'brave', title: 'Orders ‹ My Shop — WooCommerce - Brave' };
+  await h.run(5);
+  assert.equal(h.said.filter((n) => n.kind === 'side-task').length, 0, 'a short look is fine');
+  await h.run(3);
+  assert.equal(h.said.filter((n) => n.kind === 'side-task').length, 1);
 });
 
 test('scenario: asking the agent for "also a dark mode" during a bug fix is scope creep; the fix itself is not', async () => {

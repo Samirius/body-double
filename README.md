@@ -63,7 +63,7 @@ ask tiny, and makes progress visible, because visible progress is what keeps you
 |---|---|---|
 | Write the nudge, split a big step into tiny ones (pi agent with `nudge` / `split_step` tools) | **Muse Spark** (Meta Model API, via pi-ai's Meta provider) | Meta's cloud, when a key or Muse sign-in is set |
 | Same job, offline and free | **Llama 3.2 3B Instruct** (Meta) on llama.cpp | **this PC** (127.0.0.1) |
-| Decide whether an unclear window fits the quest | Kev-0.8B decision model (probabilities, no text) | this PC |
+| Decide whether an unclear window fits the quest | Muse Spark, only when signed in. Local models measured too unreliable for this (see [EVIDENCE](docs/EVIDENCE.md)); otherwise rules + your feedback decide | Meta's cloud, or nothing leaves the PC |
 
 The writers form a chain: Muse Spark → Llama on this PC → built-in templates. If one gives no nudge (no credits,
 offline), the next one writes it, so the companion never goes silent. With Llama, **nothing about your screen
@@ -102,8 +102,8 @@ npm run eval:decider   # the local decision model on 40 labelled window titles
 ```
 active window (title + app, every 15 s, ~50 ms)
   -> rules: quest keywords (on task) / quest + global distractions (drift) / idle (away) / otherwise unclear
-  -> unclear for 6 min on one site/app -> the local decision model decides once (cached 30 min)
-       quiet unless it is >= 75% sure
+  -> unclear stays quiet; your "wrong" / "missed it" teach the rules per quest (Muse Spark judges, if signed in)
+  -> same site, new page held 6+ min after the quest's first 10 min -> one "side task?" question
   -> drift tracker: nudge after ~3 min of drift (tuned by feedback), cooldown 5 min, never while away or on break
   -> pi agent (Muse Spark -> Llama -> template): one message + one next action, or split a big step first
   -> stuck: 25 min on task without finishing -> offer a smaller step
@@ -113,8 +113,8 @@ active window (title + app, every 15 s, ~50 ms)
 ## Privacy
 - Window titles stay **in memory only** (last 15 min) and are never written to disk. The log keeps app names,
   the rule that fired, and short site keys of learned rules.
-- Decisions about your windows run on **this PC** (Kev). Nudge text runs on this PC (Llama), or at Meta if you
-  add a key; it never contains a window title.
+- Decisions about your windows are rules on **this PC** (Muse Spark sees a title only if you sign in to it).
+  Nudge text runs on this PC (Llama), or at Meta if you sign in; it never contains a window title.
 - No screenshots unless you explicitly set `BD_JUDGE=screenshot`. The service and the models listen on
   127.0.0.1 only; the service needs a random token.
 
@@ -140,7 +140,7 @@ That page is one person's use, not a study.
 | Setting | Default | What it does |
 |---|---|---|
 | `META_API_KEY` | – | Muse Spark writes nudges first |
-| `BD_DECIDER` | `kev` | local decision model: `kev`, `kev-4b`, `julia` or `off` |
+| `BD_DECIDER` | `off` | experiment with a local decision model: `kev`, `kev-4b`, `julia` (they measured poorly) |
 | `BD_WRITER` | on | `off` skips the local Llama |
 | `BD_DECIDER_THRESHOLD` | 0.75 | below this the decision model stays quiet |
 | `BD_DRIFT_SECONDS` | 180 | starting nudge delay; feedback tunes it within 90–600 s |

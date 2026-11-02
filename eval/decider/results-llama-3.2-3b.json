@@ -1,0 +1,467 @@
+{
+  "model": "llama-3.2-3b",
+  "baseUrl": "http://127.0.0.1:18091/v1",
+  "cases": 40,
+  "ranAt": "2026-11-02T03:37:09.617Z",
+  "latencyMs": {
+    "median": 22872,
+    "max": 62899
+  },
+  "byThreshold": [
+    {
+      "threshold": 0.5,
+      "accuracyOnClear": 0.38,
+      "falseNudges": 3,
+      "missedDrifts": 12,
+      "unsure": 19
+    },
+    {
+      "threshold": 0.6,
+      "accuracyOnClear": 0.38,
+      "falseNudges": 3,
+      "missedDrifts": 12,
+      "unsure": 19
+    },
+    {
+      "threshold": 0.7,
+      "accuracyOnClear": 0.38,
+      "falseNudges": 3,
+      "missedDrifts": 12,
+      "unsure": 19
+    },
+    {
+      "threshold": 0.75,
+      "accuracyOnClear": 0.38,
+      "falseNudges": 3,
+      "missedDrifts": 12,
+      "unsure": 19
+    },
+    {
+      "threshold": 0.8,
+      "accuracyOnClear": 0.38,
+      "falseNudges": 3,
+      "missedDrifts": 12,
+      "unsure": 19
+    },
+    {
+      "threshold": 0.9,
+      "accuracyOnClear": 0.38,
+      "falseNudges": 3,
+      "missedDrifts": 12,
+      "unsure": 19
+    }
+  ],
+  "wrongAtDefault": [
+    {
+      "quest": "banafah",
+      "title": "Meta hackathon project ideas - Google Docs - Brave",
+      "expected": "off-task",
+      "got": "on-task",
+      "p": 1
+    },
+    {
+      "quest": "banafah",
+      "title": "ريال مدريد ضد برشلونة - يلا كورة - Brave",
+      "expected": "off-task",
+      "got": "on-task",
+      "p": 1
+    },
+    {
+      "quest": "email",
+      "title": "Amazon.eg: wireless earbuds - Brave",
+      "expected": "off-task",
+      "got": "on-task",
+      "p": 1
+    },
+    {
+      "quest": "email",
+      "title": "Apartment prices New Cairo - Aqarmap - Brave",
+      "expected": "off-task",
+      "got": "on-task",
+      "p": 1
+    },
+    {
+      "quest": "checkout",
+      "title": "WooCommerce checkout not updating totals - Stack Overflow - Brave",
+      "expected": "on-task",
+      "got": "off-task",
+      "p": 1
+    },
+    {
+      "quest": "checkout",
+      "title": "ssh staging - wp wc shop_order list",
+      "expected": "on-task",
+      "got": "off-task",
+      "p": 1
+    },
+    {
+      "quest": "checkout",
+      "title": "Checkout ‹ Staging Banafah — WordPress - Brave",
+      "expected": "on-task",
+      "got": "off-task",
+      "p": 1
+    }
+  ],
+  "rows": [
+    {
+      "quest": "banafah",
+      "app": "brave",
+      "title": "Merchant Center Next - Business info - Brave",
+      "expected": "on-task",
+      "choice": "on-task",
+      "p": 1,
+      "ms": 26014
+    },
+    {
+      "quest": "banafah",
+      "app": "chrome",
+      "title": "Google Business Profile - Opening hours - Google Chrome",
+      "expected": "on-task",
+      "choice": "on-task",
+      "p": 1,
+      "ms": 26248
+    },
+    {
+      "quest": "banafah",
+      "app": "brave",
+      "title": "Products ‹ Banafah | بنفعة — WooCommerce - Brave",
+      "expected": "on-task",
+      "choice": "on-task",
+      "p": 1,
+      "ms": 17415
+    },
+    {
+      "quest": "banafah",
+      "app": "brave",
+      "title": "In-store verification requirements - Merchant Center Help - Brave",
+      "expected": "on-task",
+      "choice": "on-task",
+      "p": 1,
+      "ms": 16160
+    },
+    {
+      "quest": "banafah",
+      "app": "excel",
+      "title": "banafah-stores-list.xlsx - Excel",
+      "expected": "on-task",
+      "choice": "unsure",
+      "p": 0,
+      "ms": 27781
+    },
+    {
+      "quest": "banafah",
+      "app": "brave",
+      "title": "Funny cat compilation 2026 - YouTube - Brave",
+      "expected": "off-task",
+      "choice": "unsure",
+      "p": 0,
+      "ms": 25003
+    },
+    {
+      "quest": "banafah",
+      "app": "brave",
+      "title": "Show HN: a new JS framework - Hacker News - Brave",
+      "expected": "off-task",
+      "choice": "unsure",
+      "p": 0,
+      "ms": 25292
+    },
+    {
+      "quest": "banafah",
+      "app": "brave",
+      "title": "Meta hackathon project ideas - Google Docs - Brave",
+      "expected": "off-task",
+      "choice": "on-task",
+      "p": 1,
+      "ms": 14600
+    },
+    {
+      "quest": "banafah",
+      "app": "brave",
+      "title": "ريال مدريد ضد برشلونة - يلا كورة - Brave",
+      "expected": "off-task",
+      "choice": "on-task",
+      "p": 1,
+      "ms": 14027
+    },
+    {
+      "quest": "banafah",
+      "app": "brave",
+      "title": "Gmail - Inbox (14) - Brave",
+      "expected": "either",
+      "choice": "unsure",
+      "p": 0,
+      "ms": 23806
+    },
+    {
+      "quest": "email",
+      "app": "brave",
+      "title": "Mailchimp - Campaign: White Friday 2026 - Brave",
+      "expected": "on-task",
+      "choice": "on-task",
+      "p": 1,
+      "ms": 23374
+    },
+    {
+      "quest": "email",
+      "app": "winword",
+      "title": "White Friday offers draft.docx - Word",
+      "expected": "on-task",
+      "choice": "on-task",
+      "p": 1,
+      "ms": 22872
+    },
+    {
+      "quest": "email",
+      "app": "brave",
+      "title": "عروض الجمعة البيضاء - بنفعة - Brave",
+      "expected": "on-task",
+      "choice": "unsure",
+      "p": 0,
+      "ms": 20343
+    },
+    {
+      "quest": "email",
+      "app": "brave",
+      "title": "Subject line ideas for Black Friday emails - Litmus - Brave",
+      "expected": "on-task",
+      "choice": "on-task",
+      "p": 1,
+      "ms": 23373
+    },
+    {
+      "quest": "email",
+      "app": "brave",
+      "title": "Amazon.eg: wireless earbuds - Brave",
+      "expected": "off-task",
+      "choice": "on-task",
+      "p": 1,
+      "ms": 11503
+    },
+    {
+      "quest": "email",
+      "app": "netflix",
+      "title": "Netflix",
+      "expected": "off-task",
+      "choice": "unsure",
+      "p": 0,
+      "ms": 24260
+    },
+    {
+      "quest": "email",
+      "app": "brave",
+      "title": "Apartment prices New Cairo - Aqarmap - Brave",
+      "expected": "off-task",
+      "choice": "on-task",
+      "p": 1,
+      "ms": 15556
+    },
+    {
+      "quest": "email",
+      "app": "brave",
+      "title": "Competitor White Friday sale - Noon Egypt - Brave",
+      "expected": "either",
+      "choice": "on-task",
+      "p": 1,
+      "ms": 27508
+    },
+    {
+      "quest": "email",
+      "app": "brave",
+      "title": "(3) Home / X - Brave",
+      "expected": "off-task",
+      "choice": "off-task",
+      "p": 1,
+      "ms": 29788
+    },
+    {
+      "quest": "email",
+      "app": "brave",
+      "title": "Canva - White Friday banner - Brave",
+      "expected": "on-task",
+      "choice": "on-task",
+      "p": 1,
+      "ms": 45326
+    },
+    {
+      "quest": "checkout",
+      "app": "code",
+      "title": "checkout.php - woocommerce-fixes - Visual Studio Code",
+      "expected": "on-task",
+      "choice": "on-task",
+      "p": 1,
+      "ms": 31679
+    },
+    {
+      "quest": "checkout",
+      "app": "brave",
+      "title": "WooCommerce checkout not updating totals - Stack Overflow - Brave",
+      "expected": "on-task",
+      "choice": "off-task",
+      "p": 1,
+      "ms": 29230
+    },
+    {
+      "quest": "checkout",
+      "app": "windowsterminal",
+      "title": "ssh staging - wp wc shop_order list",
+      "expected": "on-task",
+      "choice": "off-task",
+      "p": 1,
+      "ms": 24957
+    },
+    {
+      "quest": "checkout",
+      "app": "brave",
+      "title": "Checkout ‹ Staging Banafah — WordPress - Brave",
+      "expected": "on-task",
+      "choice": "off-task",
+      "p": 1,
+      "ms": 33775
+    },
+    {
+      "quest": "checkout",
+      "app": "brave",
+      "title": "woocommerce/woocommerce: Issue #48213 cart totals - GitHub - Brave",
+      "expected": "on-task",
+      "choice": "on-task",
+      "p": 1,
+      "ms": 62899
+    },
+    {
+      "quest": "checkout",
+      "app": "steam",
+      "title": "Steam",
+      "expected": "off-task",
+      "choice": "off-task",
+      "p": 1,
+      "ms": 30556
+    },
+    {
+      "quest": "checkout",
+      "app": "brave",
+      "title": "Elden Ring DLC review - IGN - Brave",
+      "expected": "off-task",
+      "choice": "off-task",
+      "p": 1,
+      "ms": 33458
+    },
+    {
+      "quest": "checkout",
+      "app": "brave",
+      "title": "Top 10 mechanical keyboards 2026 - YouTube - Brave",
+      "expected": "off-task",
+      "choice": "unsure",
+      "p": 0,
+      "ms": 16975
+    },
+    {
+      "quest": "checkout",
+      "app": "brave",
+      "title": "PHP 8.4 release notes - php.net - Brave",
+      "expected": "either",
+      "choice": "unsure",
+      "p": 0,
+      "ms": 6128
+    },
+    {
+      "quest": "checkout",
+      "app": "brave",
+      "title": "Reddit - r/webdev - Brave",
+      "expected": "either",
+      "choice": "unsure",
+      "p": 0,
+      "ms": 12
+    },
+    {
+      "quest": "video",
+      "app": "obs64",
+      "title": "OBS 31.0 - Profile: Untitled - Scenes: Untitled",
+      "expected": "on-task",
+      "choice": "unsure",
+      "p": 0,
+      "ms": 4
+    },
+    {
+      "quest": "video",
+      "app": "resolve",
+      "title": "DaVinci Resolve - body-double-demo",
+      "expected": "on-task",
+      "choice": "unsure",
+      "p": 0,
+      "ms": 4
+    },
+    {
+      "quest": "video",
+      "app": "audacity",
+      "title": "narration-take-3 - Audacity",
+      "expected": "on-task",
+      "choice": "unsure",
+      "p": 0,
+      "ms": 6
+    },
+    {
+      "quest": "video",
+      "app": "brave",
+      "title": "Storyboard - body-double - GitHub - Brave",
+      "expected": "on-task",
+      "choice": "unsure",
+      "p": 0,
+      "ms": 3
+    },
+    {
+      "quest": "video",
+      "app": "brave",
+      "title": "How to record a clean voice-over at home - YouTube - Brave",
+      "expected": "either",
+      "choice": "unsure",
+      "p": 0,
+      "ms": 4
+    },
+    {
+      "quest": "video",
+      "app": "brave",
+      "title": "Instagram - Reels - Brave",
+      "expected": "off-task",
+      "choice": "unsure",
+      "p": 0,
+      "ms": 3
+    },
+    {
+      "quest": "video",
+      "app": "brave",
+      "title": "Bitcoin price today - CoinMarketCap - Brave",
+      "expected": "off-task",
+      "choice": "unsure",
+      "p": 0,
+      "ms": 3
+    },
+    {
+      "quest": "video",
+      "app": "brave",
+      "title": "Best pizza in Zamalek - Google Maps - Brave",
+      "expected": "off-task",
+      "choice": "unsure",
+      "p": 0,
+      "ms": 3
+    },
+    {
+      "quest": "video",
+      "app": "spotify",
+      "title": "Spotify Premium",
+      "expected": "either",
+      "choice": "unsure",
+      "p": 0,
+      "ms": 5
+    },
+    {
+      "quest": "video",
+      "app": "brave",
+      "title": "Football transfer news live - Kooora - Brave",
+      "expected": "off-task",
+      "choice": "unsure",
+      "p": 0,
+      "ms": 3
+    }
+  ]
+}
