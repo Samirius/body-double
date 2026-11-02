@@ -4,7 +4,7 @@
 **Tagline:** The body double that speaks first.
 **Track:** Indie Developer · **Theme:** Build for Your World
 **Repository:** https://github.com/Samirius/body-double
-**Video:** upload `video/out/demo.mp4` (about 2 min; rebuild any time with `npm run video`)
+**Video:** your own screen recording with your voice (see the shot list in `video/SHOTLIST.md`)
 
 **One line**
 A proactive focus companion for ADHD brains: a pixel creature on your screen that speaks first when you drift,
@@ -25,6 +25,23 @@ step for 25 minutes it offers a smaller one. It opens the day with a plan and cl
 is the game: XP only for finished steps, deadlines as bosses with HP bars, streaks that forgive a missed day, and a
 creature that evolves. I don't type commands: I tell Claude "I'm starting the Banafah verification" or "done with
 that", and Claude drives it through MCP tools. It starts with Windows; there is nothing to run.
+
+It also guards the scope, because ADHD drift happens inside the work too:
+- When I ask my AI agent for "also a dark mode" in the middle of a bug fix, the agent checks with Nudgling and
+  tells me it's new scope: finish and commit first, or park it.
+- When the repo piles up uncommitted changes, it says "commit what works".
+- When I'm on the right site but a different job (an Elementor page edit that turns into WooCommerce orders),
+  it asks "side task?"
+
+The good part is rewarded in the moment:
+- a flow combo with a growing aura;
+- gold rain for a session with zero drift;
+- a visible quick-return bonus;
+- happiness that never goes sad;
+- achievements that unlock things the creature wears.
+
+It stays silent in calls, presentations and screen shares. Any AI agent (Claude Code, Codex, OpenClaw, Hermes, pi,
+Cursor) can set it up from the GitHub link.
 
 **How we built it (Meta AI)**
 - A **pi agent** (`@earendil-works/pi-agent-core` + `pi-ai`) writes every nudge through `nudge` / `split_step`
