@@ -72,6 +72,10 @@
   .quest-row, .vault-row { display: flex; justify-content: space-between; align-items: center; gap: 8px; padding: 6px 8px; cursor: pointer; border-left: 2px solid transparent; }
   .quest-row:hover, .vault-row:hover { background: #15183a; }
   .quest-row.active { border-left-color: var(--cyan); background: rgba(0,240,255,.06); }
+  .quest-row span { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .quest-row .mini { flex: none; padding: 1px 6px; font: 11px var(--mono); color: var(--muted); background: transparent; border: 1px solid transparent; cursor: pointer; }
+  .quest-row .mini:hover { color: var(--ink); border-color: #3a3f78; }
+  .inline-edit { flex: 1; min-width: 0; font: 13px var(--hud); color: var(--ink); background: #0b0d20; border: 1px solid var(--cyan); padding: 2px 6px; }
   .quest-row small, .vault-row small { font: 11px var(--mono); color: var(--muted); white-space: nowrap; }
   .vault-row { cursor: default; } .vault-row span { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .vault-row button { background: none; border: 1px solid var(--line); color: var(--muted); font: 11px var(--mono); cursor: pointer; padding: 1px 6px; }

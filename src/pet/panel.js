@@ -82,10 +82,32 @@ async function refresh() {
   for (const x of (q.ok ? q.data : [])) {
     const row = document.createElement('div');
     row.className = `quest-row${x.active ? ' active' : ''}`;
-    row.innerHTML = '<span></span><small></small>';
-    row.firstChild.textContent = x.title;
-    row.lastChild.textContent = `${x.done}/${x.total}${x.deadline ? ` · ${daysLeft(x.deadline)}` : ''}`;
+    row.innerHTML = '<span></span><small></small><button class="mini" title="Rename">✎</button><button class="mini" title="Delete">✕</button>';
+    const [name, info, edit, del] = row.children;
+    name.textContent = x.title;
+    info.textContent = `${x.done}/${x.total}${x.deadline ? ` · ${daysLeft(x.deadline)}` : ''}`;
     row.onclick = async () => { await window.bd.act('activate', { query: x.id }); refresh(); };
+    // Rename inline (Enter saves, Esc cancels).
+    edit.onclick = (e) => {
+      e.stopPropagation();
+      const input = document.createElement('input');
+      input.value = x.title; input.maxLength = 120; input.className = 'inline-edit';
+      input.onclick = (ev) => ev.stopPropagation();
+      input.onkeydown = async (ev) => {
+        if (ev.key === 'Escape') return refresh();
+        if (ev.key !== 'Enter' || !input.value.trim()) return;
+        await window.bd.act('quest-rename', { query: x.id, title: input.value.trim() });
+        refresh();
+      };
+      name.replaceWith(input); input.focus(); input.select();
+    };
+    // Delete: a second click within 3 s confirms.
+    del.onclick = async (e) => {
+      e.stopPropagation();
+      if (del.dataset.armed) { await window.bd.act('quest-remove', { query: x.id }); refresh(); return; }
+      del.dataset.armed = '1'; del.textContent = 'sure?';
+      setTimeout(() => { delete del.dataset.armed; del.textContent = '✕'; }, 3000);
+    };
     $('quests').appendChild(row);
   }
   if (q.ok && !q.data.length) $('quests').innerHTML = '<div class="muted">No quests yet.</div>';

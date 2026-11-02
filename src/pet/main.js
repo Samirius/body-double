@@ -105,6 +105,9 @@ async function act(name, payload = {}) {
     case 'snooze': return client.call('POST', '/pause', { paused: true, minutes: payload.minutes || 10 });
     case 'pause-toggle': { const s = await client.call('GET', '/status'); return client.call('POST', '/pause', { paused: !s.paused }); }
     case 'activate': return client.call('POST', '/quests/activate', { query: String(payload.query || '') });
+    case 'quest-rename': return client.call('POST', '/quests/edit', { query: String(payload.query || ''), patch: { title: String(payload.title || '').slice(0, 120) } });
+    case 'quest-remove': return client.call('POST', '/quests/remove', { query: String(payload.query || '') });
+    case 'scope-allow': return client.call('POST', '/scope/allow', {});
     case 'import': return client.call('POST', '/import/jarvis', {});
     case 'add-quest': {
       // Validate here too: the renderer is UI, not a trust boundary.
@@ -286,6 +289,20 @@ async function selftest() {
       for (let i = 0; i < 40 && fxVisible(); i++) await wait(150);
     }, { win: fx });
     step('fx-rage', true);
+    // The good part: a flow combo aura, then a side-task bubble with "Part of it".
+    await pet.webContents.executeJavaScript("document.getElementById('bubble').style.display = 'none'; 0");
+    await client.call('POST', '/debug/emit', { type: 'game', events: [{ type: 'flow', level: 3, minutes: 15 }] });
+    await wait(600);
+    await client.call('POST', '/debug/emit', { type: 'status', status: { flow: { level: 3, minutes: 15 } } });
+    await wait(900);
+    await shot(pet, '9-pet-flow');
+    await client.call('POST', '/debug/emit', { type: 'nudge', kind: 'side-task', message: 'Side task? This looks like "orders", not "Edit the Elementor home page".', nextAction: 'Park it and go back to: Change the hero text' });
+    await wait(1200);
+    const sideButton = await pet.webContents.executeJavaScript("document.getElementById('b-wrong').style.display !== 'none' ? document.getElementById('b-wrong').textContent : null");
+    step('side-task', { button: sideButton });
+    if (sideButton !== 'Part of it') throw new Error('side-task bubble has no "Part of it" button');
+    await shot(pet, '10-pet-side-task');
+    await pet.webContents.executeJavaScript("document.getElementById('b-ok').click(); document.getElementById('bubble').style.display = 'none'; 0");
     panel.show(); panel.webContents.send('bd:refresh');
     await wait(1500);
     await shot(panel, '4-panel');

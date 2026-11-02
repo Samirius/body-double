@@ -28,10 +28,32 @@ const feelings = createFeelings();
 function react(r) {
   if (!r) return;
   if (r.emote) state.emote = { name: r.emote, until: performance.now() + 2800 };
-  // Nothing loud while paused (a meeting, a snooze).
-  const sound = prefs.sound && !QUIET && !state.paused;
+  // Nothing loud while paused, in a call or presenting, or over a fullscreen app.
+  const calm = state.paused || state.quiet || state.fullscreen;
+  const sound = prefs.sound && !QUIET && !calm;
   if (r.voice && sound) play(r.voice);
-  if (r.fx && prefs.fx && !state.paused) window.bd.fx({ ...r.fx, x: wander.x() + SPR / 2, sound });
+  if (r.fx && prefs.fx && !calm) window.bd.fx({ ...r.fx, x: wander.x() + SPR / 2, sound });
+}
+// Flow combo: an aura behind the creature that grows (cyan, then gold at 30 min)
+// and a small "FLOW xN" tag beside it.
+function drawFlow(now) {
+  const lv = state.flow?.level || 0;
+  if (!lv) return;
+  const cx = wander.x() + SPR / 2, cy = canvas.height - SPR / 2 - GROUND;
+  const gold = lv >= 6, color = gold ? '255, 210, 58' : '0, 240, 255';
+  const r = SPR * (0.55 + Math.min(lv, 8) * 0.05) + Math.sin(now / 400) * 3;
+  const g = ctx.createRadialGradient(cx, cy, SPR * 0.2, cx, cy, r);
+  g.addColorStop(0, `rgba(${color}, ${Math.min(0.12 + lv * 0.05, 0.45)})`);
+  g.addColorStop(1, `rgba(${color}, 0)`);
+  ctx.fillStyle = g; ctx.beginPath(); ctx.arc(cx, cy, r, 0, Math.PI * 2); ctx.fill();
+  ctx.save();
+  ctx.font = '700 12px "Cascadia Mono", Consolas, monospace'; ctx.textAlign = 'right';
+  ctx.fillStyle = `rgb(${color})`; ctx.shadowColor = `rgb(${color})`; ctx.shadowBlur = 8;
+  // Outside the focus ring's radius, on whichever side has room.
+  const gap = SPR * 0.66 + 10, right = cx - gap > 80;
+  ctx.textAlign = right ? 'right' : 'left';
+  ctx.fillText(`FLOW ×${lv}`, right ? cx - gap : cx + gap, cy + 4);
+  ctx.restore();
 }
 function drawFeeling(now) {
   const e = state.emote;
@@ -73,6 +95,7 @@ function loop(now) {
   const pose = decidePose({ now, cheerUntil: state.cheerUntil, talking, label: state.label, paused: state.paused, moving: wander.moving() });
   wander.step(dt, { canMove: !HOLD && (pose === 'idle' || pose === 'walk' || pose === 'worry') });
   ctx.clearRect(0, 0, canvas.width, canvas.height);
+  drawFlow(now);
   draw(buildFrame({ state: pose, t, stage: state.stage, facing: wander.facing() }), wander.x(), canvas.height - SPR - GROUND);
   drawFeeling(now);
   // Walking right up to the screen edge: "whoaaa".
@@ -138,6 +161,9 @@ const KIND = {
   'session-end': { title: 'SESSION // COMPLETE', accent: '#39ff9a' },
   'break-end': { title: 'BREAK // OVER', accent: '#00f0ff' },
   evening: { title: 'LOG // RUN COMPLETE', accent: '#39ff9a' },
+  hyperfocus: { title: 'VITALS // REFILL', accent: '#f5ff3b' },
+  scope: { title: 'SCOPE // GROWING', accent: '#f5ff3b' },
+  'side-task': { title: 'SCOPE // SIDE TASK?', accent: '#f5ff3b' },
 };
 function placeBubble() {
   const left = Math.max(8, Math.min(innerWidth - BUBBLE_W - 8, wander.x() + SPR / 2 - 70));
@@ -160,13 +186,17 @@ function showBubble({ message, nextAction, kind = 'drift' }) {
   $('next').textContent = nextAction || '';
   // Drift-type nudges can be parked or marked wrong; summaries and offers get OK.
   const drift = kind === 'drift' || kind === 'chat';
-  $('b-wrong').style.display = drift ? '' : 'none';
-  $('b-park').style.display = drift ? '' : 'none';
+  // Scope moments: park the new thing; a side task can also be "part of it".
+  const scope = kind === 'scope' || kind === 'side-task';
+  state.bubbleKind = kind;
+  $('b-wrong').style.display = drift || kind === 'side-task' ? '' : 'none';
+  $('b-wrong').textContent = kind === 'side-task' ? 'Part of it' : 'Wrong';
+  $('b-park').style.display = drift || scope ? '' : 'none';
   // Questions and plan confirmations only need OK / Later.
   const plain = kind === 'ask' || kind === 'plan';
-  $('b-snooze').style.display = kind === 'evening' || plain ? 'none' : '';
+  $('b-snooze').style.display = kind === 'evening' || plain || scope ? 'none' : '';
   $('b-done').style.display = plain ? 'none' : '';
-  $('b-ok').style.display = drift ? 'none' : '';
+  $('b-ok').style.display = drift || kind === 'side-task' ? 'none' : '';
   $('b-ok').textContent = kind === 'ask' ? 'Later' : 'OK';
   $('ask').style.display = kind === 'ask' ? 'flex' : 'none';
   window.bd.setTyping(kind === 'ask');
@@ -209,6 +239,11 @@ $('b-park').onclick = async () => {
 };
 $('b-wrong').onclick = async () => {
   hideBubble();
+  if (state.bubbleKind === 'side-task') {
+    const s = await act('scope-allow');
+    if (s.ok) floater(`LEARNED // "${s.data.allowed}" IS PART OF IT`, 'good');
+    return;
+  }
   const r = await act('wrong');
   if (r.ok) floater(r.data.learned ? `LEARNED // "${r.data.keyword}" OK HERE` : 'NOTED', 'good');
 };
@@ -256,6 +291,8 @@ async function refreshStatus() {
   if (r.data.label) state.label = r.data.label;
   state.stage = petStage(r.data.level.level);
   state.session = r.data.session || null;
+  state.flow = r.data.flow || null;
+  state.quiet = !!r.data.quiet; state.fullscreen = !!r.data.fullscreen;
   applyGlow();
   // First run (or every quest finished): ask once per launch instead of nudging about nothing.
   if (!r.data.quest && !state.asked) { state.asked = true; askQuest(); }
@@ -270,6 +307,9 @@ window.bd.onEvent((ev) => {
     // A snooze (from the bubble, the HUD or Claude): a sigh, or on the 3rd in an hour, the big "I'M NOT MAD".
     if (ev.paused === true && ev.pausedUntil && !state.paused) { state.paused = false; react(feelings.snooze()); }
     if (typeof ev.paused === 'boolean') state.paused = ev.paused;
+    if (typeof ev.quiet === 'boolean') state.quiet = ev.quiet;
+    if (typeof ev.fullscreen === 'boolean') state.fullscreen = ev.fullscreen;
+    if (ev.flow) state.flow = ev.flow;
     applyGlow();
     return;
   }
@@ -286,8 +326,16 @@ window.bd.onEvent((ev) => {
     case 'boss-defeated': floater('BOSS DOWN', 'big'); cheer(4000); react(feelings.celebrate('boss-defeated', g.quest || '')); break;
     case 'pet-evolved': state.stage = g.stage; floater('NUDGLING EVOLVED', 'big'); cheer(4000); react(feelings.celebrate('pet-evolved')); break;
     case 'shield-used': floater('STREAK SHIELD USED', 'good'); break;
-    case 'returned': floater('BACK ON QUEST', 'good'); cheer(1500); hideBubble(); react(feelings.returned()); break;
+    case 'returned': {
+      const r = feelings.returned(g.secondsAfterNudge);
+      floater(r.quick ? `QUICK RETURN // ${g.secondsAfterNudge}S` : 'BACK ON QUEST', r.quick ? 'big' : 'good');
+      cheer(r.quick ? 2500 : 1500); hideBubble(); react(r);
+      break;
+    }
     case 'session-done': floater(`SESSION COMPLETE // ${g.minutes} MIN`, 'big'); cheer(3000); break;
+    case 'perfect-session': react(feelings.perfect(g.minutes)); break;
+    case 'flow': state.flow = { level: g.level, minutes: g.minutes }; if (g.level === 1 || g.level % 6 === 0) floater(`FLOW ×${g.level} // ${g.minutes} MIN`, 'good'); react(feelings.flow(g.level)); break;
+    case 'flow-banked': state.flow = null; floater(`FLOW BANKED // ${g.minutes} MIN`, 'good'); break;
     case 'parked': break; // the Park button already confirmed it
     default: break;
   }
