@@ -13,6 +13,7 @@ import { completeStep, bossHp, levelProgress, dayKey, TITLES } from './core/game
 import { newId } from './core/store.js';
 import { createRhythm } from './core/rhythm.js';
 import { gitScope, tooMuchUncommitted, pageKey, scopeHint } from './core/scope.js';
+import { newRewards, applyReward, settle, equip, mood, weekRecap, ACHIEVEMENTS, COSMETICS } from './core/rewards.js';
 
 export const DEFAULT_TIMING = {
   unclearMinutes: 6, // same unclear site/app this long -> ask the judge
@@ -66,6 +67,16 @@ export function createCompanion({ store, watcher, makeBrain, ui, judge = null, c
   let lastSide = null; // { questId, key } the side task last pointed out (for "it's part of it")
 
   const nextStep = (q) => q?.steps.find((s) => !s.done) || null;
+  // Rewards for good habits (see core/rewards.js): happiness, achievements, cosmetics.
+  const rewardsNow = () => store.get().rewards || newRewards();
+  const rewardSummary = (r = rewardsNow()) => ({ happiness: r.happiness, mood: mood(r.happiness), equipped: r.equipped, achievements: r.achievements.length, total: ACHIEVEMENTS.length });
+  function reward(type, extra = {}) {
+    const { rewards, events } = applyReward(rewardsNow(), { type, ...extra }, now());
+    store.update((st) => ({ ...st, rewards }));
+    for (const e of events) log('achievement', { id: e.id });
+    if (events.length) ui.gameEvents?.(events);
+    ui.status?.({ label: lastLabel, rewards: rewardSummary(rewards) });
+  }
   const lower = (x) => String(x || '').trim().toLowerCase();
   function updateQuest(id, fn) { store.update((st) => ({ ...st, quests: st.quests.map((q) => (q.id === id ? fn(q) : q)) })); }
 
@@ -169,6 +180,7 @@ export function createCompanion({ store, watcher, makeBrain, ui, judge = null, c
     } else if (event.type === 'returned') {
       store.update((s) => ({ ...s, nudges: { ...s.nudges, returned: s.nudges.returned + 1, returnSeconds: [...s.nudges.returnSeconds, event.secondsAfterNudge].slice(-200) } }));
       ui.gameEvents?.([{ type: 'returned', secondsAfterNudge: event.secondsAfterNudge }]);
+      if (event.secondsAfterNudge != null && event.secondsAfterNudge <= 60) reward('quick');
     }
   }
 
@@ -221,6 +233,8 @@ export function createCompanion({ store, watcher, makeBrain, ui, judge = null, c
       const perfect = !s.drifts;
       log('session-done', { minutes: s.minutes, perfect });
       ui.gameEvents?.([{ type: 'session-done', minutes: s.minutes }, ...(perfect ? [{ type: 'perfect-session', minutes: s.minutes }] : [])]);
+      reward('session');
+      if (perfect) reward('perfect');
       rhythm.rested();
       setSession({ kind: 'break', minutes: T.breakMinutes, startAt: at, endAt: at + T.breakMinutes * 60_000, questId: s.questId });
       await speak('session-end', { type: 'session-end', minutes: s.minutes, breakMinutes: T.breakMinutes });
@@ -248,6 +262,7 @@ export function createCompanion({ store, watcher, makeBrain, ui, judge = null, c
     if (!item.title && !item.note) throw new Error('nothing to park: no recent window and no note');
     store.update((st) => ({ ...st, vault: [item, ...(st.vault || [])].slice(0, 200) }));
     log('parked', { key: item.key });
+    reward('park');
     ui.gameEvents?.([{ type: 'parked', label: item.note || item.key || item.title }]);
     return item;
   }
@@ -323,7 +338,7 @@ export function createCompanion({ store, watcher, makeBrain, ui, judge = null, c
       ui.status?.({ label: lastLabel, quiet, fullscreen });
     }
     for (const e of events) {
-      if (e.type === 'flow') { log('flow', { level: e.level, minutes: e.minutes }); ui.gameEvents?.([e]); }
+      if (e.type === 'flow') { log('flow', { level: e.level, minutes: e.minutes }); ui.gameEvents?.([e]); reward('flow', { level: e.level }); }
       if (e.type === 'flow-banked') {
         store.update((st) => {
           const f = st.flow || { totalMinutes: 0, bestMinutes: 0, byDay: {} }, day = dayKey(at);
@@ -396,6 +411,14 @@ export function createCompanion({ store, watcher, makeBrain, ui, judge = null, c
     return r;
   }
 
+  // Happiness settles back toward 50 over the hours (never below).
+  function settleHappiness(at) {
+    const r = store.get().rewards;
+    if (!r) return;
+    const hours = (at - (r.settledAt || at)) / 3_600_000;
+    if (!r.settledAt || hours >= 1) store.update((st) => ({ ...st, rewards: { ...settle(r, r.settledAt ? hours : 0), settledAt: at } }));
+  }
+
   async function tick() {
     const st0 = store.get();
     if (st0.paused && st0.pausedUntil && now() >= st0.pausedUntil) { store.update((st) => ({ ...st, paused: false, pausedUntil: null })); log('resumed', { reason: 'snooze ended' }); ui.status?.({ label: lastLabel, paused: false, pausedUntil: null }); }
@@ -405,6 +428,7 @@ export function createCompanion({ store, watcher, makeBrain, ui, judge = null, c
       const sample = await watcher.sample();
       const quest = store.activeQuest();
       const at = now();
+      settleHappiness(at);
       let c = classify(sample, quest, rules);
       if (sample) {
         recent.push({ at, app: sample.app, title: sample.title, label: c.label, neutral: !!c.neutral });
@@ -467,6 +491,18 @@ export function createCompanion({ store, watcher, makeBrain, ui, judge = null, c
     scopeCheck,
     allowScope,
     settings: () => ({ ...SETTINGS, ...(store.get().settings || {}) }),
+    rewards() {
+      const r = rewardsNow();
+      return { ...rewardSummary(r), achievements: ACHIEVEMENTS.map((a) => ({ id: a.id, name: a.name, desc: a.desc, unlocked: r.achievements.includes(a.id), unlocks: a.unlocks ? COSMETICS[a.unlocks] : null })), wardrobe: Object.entries(COSMETICS).map(([id, name]) => ({ id, name, unlocked: r.unlocked.includes(id), equipped: r.equipped === id })), trophies: r.trophies };
+    },
+    equip(item) {
+      const r = equip(rewardsNow(), item || null);
+      store.update((st) => ({ ...st, rewards: r }));
+      log('equip', { item: r.equipped });
+      ui.status?.({ label: lastLabel, rewards: rewardSummary(r) });
+      return rewardSummary(r);
+    },
+    week: () => weekRecap(store.get().log, now()),
     // Validated, so a bad value from any client can't break the loop.
     updateSettings(patch = {}) {
       const int = (v, lo, hi) => (v == null || v === '' ? null : Math.max(lo, Math.min(hi, Math.round(Number(v)))));
@@ -565,12 +601,14 @@ export function createCompanion({ store, watcher, makeBrain, ui, judge = null, c
       onTaskMs = 0;
       log('step-done', { step: step.text, xp: r.events.find((e) => e.type === 'xp')?.amount || 0, titles: r.events.filter((e) => e.type === 'title').map((e) => e.id), events: r.events.map((e) => e.type) });
       ui.gameEvents?.(r.events);
+      reward('step');
+      if (r.events.some((e) => e.type === 'boss-defeated')) reward('boss', { quest: quest.title });
       return r.events;
     },
     status() {
       const st = store.get();
       const quest = store.activeQuest();
-      return { settings: { ...SETTINGS, ...(st.settings || {}) }, flow: rhythm.flow(), quiet, fullscreen, session: st.session || null, paused: st.paused, pausedUntil: st.pausedUntil || null, label: lastLabel, quest: quest && { title: quest.title, next: nextStep(quest)?.text || null, boss: quest.boss ? bossHp(quest) : null }, level: levelProgress(st.game.xp.total), skills: st.game.xp.skills, titles: st.game.titles, streak: st.game.streak, nudges: st.nudges, nudgeAfterSeconds: driftAfter(), judge: judge?.mode || 'off', today: dayActivity() };
+      return { rewards: rewardSummary(), settings: { ...SETTINGS, ...(st.settings || {}) }, flow: rhythm.flow(), quiet, fullscreen, session: st.session || null, paused: st.paused, pausedUntil: st.pausedUntil || null, label: lastLabel, quest: quest && { title: quest.title, next: nextStep(quest)?.text || null, boss: quest.boss ? bossHp(quest) : null }, level: levelProgress(st.game.xp.total), skills: st.game.xp.skills, titles: st.game.titles, streak: st.game.streak, nudges: st.nudges, nudgeAfterSeconds: driftAfter(), judge: judge?.mode || 'off', today: dayActivity() };
     },
   };
 }

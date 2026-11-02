@@ -55,6 +55,10 @@ test('scenario: a 25-minute session with no drift is a perfect session; one drif
   await h.c.startSession({ minutes: 25 });
   await h.run(26);
   assert.ok(h.game.some((e) => e.type === 'perfect-session' && e.minutes === 25));
+  // ...which earns the "Clean Run" achievement and unlocks the shades.
+  assert.ok(h.game.some((e) => e.type === 'achievement' && e.id === 'clean-run' && e.cosmetic === 'shades'));
+  assert.equal(h.c.rewards().wardrobe.find((w) => w.id === 'shades').unlocked, true);
+  assert.ok(h.c.status().rewards.happiness > 60);
   let w = { app: 'brave', title: 'Funny cats - YouTube - Brave' };
   const h2 = setup({ window: () => w });
   await h2.c.startSession({ minutes: 25 });

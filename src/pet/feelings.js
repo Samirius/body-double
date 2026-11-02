@@ -39,6 +39,8 @@ export function createFeelings({ now = Date.now } = {}) {
     // --- the good part: rewarded in the moment -------------------------------
     // Flow combo: a soft chime when it starts and at every half hour (x6).
     flow(level) { return level === 1 || level % 6 === 0 ? { emote: level >= 6 ? 'sparkle' : null, voice: 'chime' } : null; },
+    // A good habit earned an achievement (maybe something to wear).
+    achievement(name, unlocks = null) { return { emote: 'sparkle', voice: 'celebrate', fx: { kind: 'confetti', text: `ACHIEVEMENT // ${String(name).toUpperCase()}`, sub: unlocks ? `Unlocked: ${unlocks}. Wear it from the HUD.` : '' } }; },
     // A whole focus session without a single drift.
     perfect(minutes) { calm(); return { emote: 'heart', voice: 'celebrate', fx: { kind: 'gold', text: 'PERFECT SESSION', sub: `${minutes} minutes, zero drift.` } }; },
     // Back within a minute of a nudge: the comeback you can see.

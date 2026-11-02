@@ -131,6 +131,9 @@ async function act(name, payload = {}) {
     case 'quest-remove': return client.call('POST', '/quests/remove', { query: String(payload.query || '') });
     case 'settings': return client.call('POST', '/settings', payload || {});
     case 'get-settings': return client.call('GET', '/settings');
+    case 'rewards': return client.call('GET', '/rewards');
+    case 'equip': return client.call('POST', '/rewards/equip', { item: payload.item ?? null });
+    case 'week': return client.call('GET', '/week');
     case 'scope-allow': return client.call('POST', '/scope/allow', {});
     case 'import': return client.call('POST', '/import/jarvis', {});
     case 'add-quest': {
@@ -346,6 +349,20 @@ async function selftest() {
     if (afterAdd.quest?.title !== 'Write the White Friday email' || afterAdd.quest?.boss?.max !== 3) throw new Error('panel form did not create the quest');
     await panel.webContents.executeJavaScript("document.querySelector('main').scrollTop = 0");
     await shot(panel, '5-panel-after-add');
+    // Rewards: parking an idea earns the first achievement; the HUD shows it with the settings below.
+    await client.call('POST', '/vault/park', { note: 'dark mode idea' });
+    await wait(600);
+    panel.webContents.send('bd:refresh');
+    await wait(1200);
+    await panel.webContents.executeJavaScript("document.getElementById('rewards-card').scrollIntoView(); 0");
+    await wait(400);
+    await shot(panel, '11-panel-rewards');
+    await panel.webContents.executeJavaScript("document.getElementById('settings-card').scrollIntoView(); 0");
+    await wait(400);
+    await shot(panel, '12-panel-settings');
+    const rw = await client.call('GET', '/rewards');
+    step('rewards', { achievements: rw.achievements.filter((a) => a.unlocked).map((a) => a.id), mood: rw.mood });
+    if (!rw.achievements.find((a) => a.id === 'first-park')?.unlocked) throw new Error('parking did not earn "Parked, not chased"');
     report.ok = true;
   } catch (e) { report.ok = false; report.error = String(e.stack || e); }
   writeFileSync(path.join(SELFTEST_DIR, 'report.json'), JSON.stringify(report, null, 2));

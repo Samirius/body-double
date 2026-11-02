@@ -121,6 +121,39 @@ $('a-import').onclick = run('import');
 $('a-stats').onclick = run('stats');
 $('close').onclick = () => window.bd.act('panel');
 
+// Rewards card: mood, wardrobe (unlocked cosmetics), achievements, trophies, this week.
+async function refreshRewards() {
+  const [r, w] = await Promise.all([window.bd.act('rewards'), window.bd.act('week')]);
+  if (r.ok) {
+    const d = r.data;
+    $('joy-label').textContent = `Mood: ${d.mood} · ${d.achievements.filter((a) => a.unlocked).length}/${d.achievements.length} achievements`;
+    $('joy').style.width = `${d.happiness}%`;
+    $('wardrobe').innerHTML = '';
+    for (const item of [{ id: null, name: 'Nothing', unlocked: true, equipped: !d.equipped }, ...d.wardrobe]) {
+      const b = document.createElement('button');
+      b.textContent = item.name; b.disabled = !item.unlocked; b.className = item.equipped ? 'on' : '';
+      b.title = item.unlocked ? 'Wear it' : 'Earn the matching achievement to unlock';
+      b.onclick = async () => { await window.bd.act('equip', { item: item.id }); refreshRewards(); };
+      $('wardrobe').appendChild(b);
+    }
+    $('achievements').innerHTML = '';
+    for (const a of d.achievements) {
+      const row = document.createElement('div');
+      row.className = a.unlocked ? '' : 'locked';
+      row.innerHTML = '<b></b> <small></small>';
+      row.firstChild.textContent = `${a.unlocked ? '★' : '☆'} ${a.name}`;
+      row.lastChild.textContent = `${a.desc}${a.unlocks ? ` → ${a.unlocks}` : ''}`;
+      $('achievements').appendChild(row);
+    }
+    $('trophies').textContent = d.trophies.length ? `Trophy shelf: ${d.trophies.map((t) => `🏆 ${t.quest}`).join(' · ')}` : 'Trophy shelf: beat a deadline boss to place the first one.';
+  }
+  if (w.ok) {
+    const x = w.data;
+    const n = (k, one, many = `${one}s`) => `${k} ${k === 1 ? one : many}`;
+    $('week').textContent = `This week: ${n(x.steps, 'step')} · ${x.flowMinutes} min of flow · ${x.perfectSessions}/${n(x.sessions, 'session')} perfect · ${n(x.comebacks, 'comeback')} · ${n(x.parked, 'idea')} parked${x.bestDay ? ` · best day ${x.bestDay.day} (${n(x.bestDay.steps, 'step')})` : ''}`;
+  }
+}
+
 // Settings card: saved in the service on every change (creature and agents see it too).
 const showSettings = (s) => {
   $('s-delay').value = s.driftAfterSeconds; $('s-delay-v').textContent = `${Math.round(s.driftAfterSeconds / 6) / 10} min`;
@@ -145,7 +178,8 @@ $('s-fx').onchange = saveSetting('fx', () => $('s-fx').checked);
 
 // AI card: the model chain, and "Sign in with Meta" (Muse Spark, no key needed).
 const showAi = (s) => {
-  $('ai-models').textContent = (s.models || 'templates').replace(/llama-local\/llama-3\.2-3b/, 'Llama 3.2 3B (this PC)').replace(/meta\/muse-spark[\w.-]*/, 'Muse Spark (Meta)').replace(/ -> /g, '  →  ') + '  →  templates';
+  const chain = !s.models || /^templates/.test(s.models) ? '' : `${s.models.replace(/llama-local\/llama-3\.2-3b/, 'Llama 3.2 3B (this PC)').replace(/meta\/muse-spark[\w.-]*/, 'Muse Spark (Meta)').replace(/ -> /g, '  →  ')}  →  `;
+  $('ai-models').textContent = `${chain}built-in messages`;
   $('a-meta').textContent = s.signedIn ? 'Sign out of Meta' : 'Sign in with Meta';
   if (s.lastError && !s.signedIn) $('ai-code').textContent = `Meta sign-in failed: ${s.lastError}`;
 };
@@ -200,7 +234,8 @@ $('quest-form').addEventListener('submit', async (e) => {
   formTouched = false;
   refresh();
 });
-window.bd.onRefresh(refresh);
+window.bd.onRefresh(() => { refresh(); refreshRewards(); });
+refreshRewards();
 window.bd.onEvent((ev) => { if (ev.type === 'game' || ev.type === 'hello') refresh(); });
 setInterval(refresh, 20_000);
 refresh();

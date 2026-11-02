@@ -84,6 +84,23 @@ function accessories(g, stage, cx, top, layer) {
   if (stage >= 4) stamp(g, Math.round(cx - 3.5), Math.round(top - 4), ['y.y.y.y', 'yyyyyyy', 'ypyyypy', 'yyyyyyy']);
 }
 
+// Cosmetics earned with achievements (core/rewards.js), drawn in sprite cells so
+// they move with the body and turn with it.
+function wearable(g, item, cx, cy, top) {
+  const x = (dx) => Math.round(cx + dx), y = (dy) => Math.round(top + dy);
+  const eyeY = Math.round(cy - 2);
+  if (item === 'shades') stamp(g, x(-4.5), eyeY, ['kkkkkkkkkk', '.kzk..kzk.']);
+  if (item === 'cap') stamp(g, x(-5.5), y(-2), ['...pppppp...', '..pppppppp..', '..pppppppppppp']);
+  if (item === 'headphones') {
+    stamp(g, x(-6.5), y(-1), ['.kkkkkkkkkkkk.']);
+    stamp(g, x(-8.5), Math.round(cy - 4), ['kk', 'kz', 'kz', 'kk']);
+    stamp(g, x(7.5), Math.round(cy - 4), ['kk', 'zk', 'zk', 'kk']);
+  }
+  if (item === 'bow') stamp(g, x(-6.5), y(-1), ['pp.pp', 'ppkpp', 'pp.pp']);
+  if (item === 'halo') stamp(g, x(-4.5), y(-5), ['.yyyyyyyy.', 'y........y', '.yyyyyyyy.']);
+  if (item === 'crown') stamp(g, x(-3.5), y(-4), ['y.y.y.y', 'yyyyyyy', 'ypyyypy', 'yyyyyyy']);
+}
+
 function overlay(g, kind, t) {
   if (kind === 'zzz') {
     const off = Math.floor(t * 2) % 3;
@@ -98,7 +115,7 @@ function overlay(g, kind, t) {
 }
 
 // One animation frame. `t` is seconds (drives breathing, steps, blinks).
-export function buildFrame({ state = 'idle', t = 0, stage = 1, facing = 1 } = {}) {
+export function buildFrame({ state = 'idle', t = 0, stage = 1, facing = 1, wear = null } = {}) {
   const g = grid();
   const cx = 11.5;
   let cy = 13.5, rx = 8.5, ry = 7.6, jump = 0, phase = 0;
@@ -123,6 +140,7 @@ export function buildFrame({ state = 'idle', t = 0, stage = 1, facing = 1 } = {}
   mouth(g, cx, cy, { idle: 'smile', walk: 'smile', talk: talkOpen ? 'open' : 'small', cheer: 'grin', sleep: 'small', worry: 'wavy' }[state] || 'smile');
   if (state === 'cheer' || state === 'talk') { put(g, cx - 6.5, cy + 1, 'p'); put(g, cx + 5.5, cy + 1, 'p'); }
   accessories(g, stage, cx, top, 'front');
+  if (wear && !(wear === 'shades' && state === 'sleep')) wearable(g, wear, cx, cy, top);
   if (state === 'sleep') overlay(g, 'zzz', t);
   if (state === 'cheer') overlay(g, 'sparkles', t);
   if (state === 'worry') overlay(g, 'sweat', t);

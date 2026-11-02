@@ -95,7 +95,7 @@ function loop(now) {
   wander.step(dt, { canMove: !HOLD && (pose === 'idle' || pose === 'walk' || pose === 'worry') });
   ctx.clearRect(0, 0, canvas.width, canvas.height);
   drawFlow(now);
-  draw(buildFrame({ state: pose, t, stage: state.stage, facing: wander.facing() }), wander.x(), canvas.height - SPR - GROUND);
+  draw(buildFrame({ state: pose, t, stage: state.stage, facing: wander.facing(), wear: state.wear }), wander.x(), canvas.height - SPR - GROUND);
   drawFeeling(now);
   // Walking right up to the screen edge: "whoaaa".
   if (wander.moving() && (wander.x() <= 30 || wander.x() >= innerWidth - SPR - 30)) react(feelings.edge());
@@ -292,6 +292,7 @@ async function refreshStatus() {
   state.session = r.data.session || null;
   state.flow = r.data.flow || null;
   applySettings(r.data.settings);
+  state.wear = r.data.rewards?.equipped || null;
   state.quiet = !!r.data.quiet; state.fullscreen = !!r.data.fullscreen;
   applyGlow();
   // First run (or every quest finished): ask once per launch instead of nudging about nothing.
@@ -311,6 +312,7 @@ window.bd.onEvent((ev) => {
     if (typeof ev.fullscreen === 'boolean') state.fullscreen = ev.fullscreen;
     if (ev.flow) state.flow = ev.flow;
     if (ev.settings) applySettings(ev.settings);
+    if (ev.rewards) state.wear = ev.rewards.equipped || null;
     applyGlow();
     return;
   }
@@ -335,6 +337,7 @@ window.bd.onEvent((ev) => {
     }
     case 'session-done': floater(`SESSION COMPLETE // ${g.minutes} MIN`, 'big'); cheer(3000); break;
     case 'perfect-session': react(feelings.perfect(g.minutes)); break;
+    case 'achievement': floater(`ACHIEVEMENT // ${String(g.name).toUpperCase()}`, 'big'); cheer(3000); react(feelings.achievement(g.name, g.unlocks)); break;
     case 'flow': state.flow = { level: g.level, minutes: g.minutes }; if (g.level === 1 || g.level % 6 === 0) floater(`FLOW ×${g.level} // ${g.minutes} MIN`, 'good'); react(feelings.flow(g.level)); break;
     case 'flow-banked': state.flow = null; floater(`FLOW BANKED // ${g.minutes} MIN`, 'good'); break;
     case 'parked': break; // the Park button already confirmed it

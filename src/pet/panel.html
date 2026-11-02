@@ -68,6 +68,15 @@
   .skill span:last-child { font: 11px var(--mono); color: var(--magenta); }
   .skill .bar { grid-column: 1 / -1; margin: 0; }
   .chips { display: flex; flex-wrap: wrap; gap: 6px; }
+  .bar.joy > i { background: linear-gradient(90deg, var(--cyan), #ffd23a); }
+  .ach { display: grid; grid-template-columns: 1fr; gap: 4px; margin-top: 8px; }
+  .ach div { font: 12px var(--hud); color: var(--ink); } .ach div.locked { color: var(--muted); opacity: .55; }
+  .ach small { color: var(--muted); }
+  .wear { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+  .wear button { padding: 3px 8px; font: 11px var(--mono); color: var(--ink); background: transparent; border: 1px solid #2a2f63; cursor: pointer; }
+  .wear button.on { border-color: var(--cyan); color: var(--cyan); }
+  .wear button:disabled { opacity: .35; cursor: default; }
+  .week { font: 12px var(--hud); color: var(--ink); margin-top: 8px; line-height: 1.5; }
   .chip { padding: 3px 9px; font: 700 11px var(--mono); letter-spacing: .06em; text-transform: uppercase; color: var(--yellow); border: 1px solid var(--yellow); box-shadow: inset 0 0 8px rgba(245,255,59,.25); }
   .stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; text-align: center; }
   .stats b { display: block; font: 800 20px var(--hud); color: var(--cyan); text-shadow: 0 0 8px rgba(0,240,255,.5); }
@@ -142,6 +151,13 @@
     <section class="card"><h3>Skills</h3><div id="skills" class="muted">Finish a step to start levelling skills.</div></section>
     <section class="card"><h3>Titles</h3><div class="chips" id="titles"><span class="muted">None yet. Your first step earns one.</span></div></section>
     <section class="card"><h3>Nudges</h3><div class="stats"><div><b id="n-sent">0</b><span>sent</span></div><div><b id="n-back">0</b><span>turned around</span></div><div><b id="n-med">–</b><span>median back</span></div></div></section>
+    <section class="card" id="rewards-card"><h3>Rewards</h3>
+      <div><span id="joy-label">Mood</span></div><div class="bar joy"><i id="joy"></i></div>
+      <div class="wear" id="wardrobe"></div>
+      <div class="ach" id="achievements"></div>
+      <div class="week" id="trophies"></div>
+      <div class="week" id="week"></div>
+    </section>
     <section class="card" id="settings-card"><h3>Settings</h3>
       <div class="set">
         <label for="s-delay">Nudge after <b id="s-delay-v"></b></label><input type="range" id="s-delay" min="90" max="600" step="30">

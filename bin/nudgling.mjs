@@ -7,6 +7,7 @@
 //   nudgling park "idea for later"     save a side idea to the vault
 //   nudgling focus [25|50|stop]        focus session with the timer ring
 //   nudgling pause [minutes] | resume
+//   nudgling week | rewards | wear <item|none>
 //   nudgling settings [key=value ...]  e.g. quietFrom=22 quietTo=7 sound=false volume=40
 //   nudgling connect [agent|all] [--remove]   add MCP + skill to claude-code, claude-desktop, codex, cursor, openclaw, hermes, pi
 //   nudgling agents                    which agents are installed / connected
@@ -52,6 +53,9 @@ async function main() {
     case 'focus': return out(await call('POST', '/session', words() === 'stop' ? { action: 'stop' } : { action: 'start', minutes: Number(words()) || 25 }));
     case 'pause': return out(await call('POST', '/pause', { paused: true, minutes: Number(words()) || undefined }));
     case 'resume': return out(await call('POST', '/pause', { paused: false }));
+    case 'week': return out(await call('GET', '/week'));
+    case 'rewards': return out(await call('GET', '/rewards'));
+    case 'wear': return out(await call('POST', '/rewards/equip', { item: words() === 'none' ? null : words() }));
     case 'settings': {
       const patch = Object.fromEntries(rest.filter((a) => a.includes('=')).map((a) => { const [k, v] = a.split('='); return [k, v === 'true' ? true : v === 'false' ? false : v === 'null' || v === '' ? null : Number.isNaN(Number(v)) ? v : Number(v)]; }));
       return out(Object.keys(patch).length ? await call('POST', '/settings', patch) : await call('GET', '/settings'));
