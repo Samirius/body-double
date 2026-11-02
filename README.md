@@ -52,9 +52,17 @@ leaves the machine**. The model only gets abstract facts ("drifted 4 min from *B
 *Upload storefront photo*").
 
 ## Start it
-**On Samir's PC:** double-click **Nudgling** on the Desktop. It also starts by itself at login.
+**One line (Windows PowerShell):** installs Node if needed, Nudgling, the local models, start-at-login, and
+starts it.
+```powershell
+irm https://raw.githubusercontent.com/Samirius/body-double/main/install.ps1 | iex
+```
 
-**On a fresh Windows PC (Node 22+):**
+**Give the repo link to your AI agent** (Claude Code, Codex, OpenClaw, Hermes, pi, Cursor…): it follows
+[AGENTS.md](AGENTS.md) to install Nudgling and connect itself (`nudgling connect <agent>`). Agents without MCP use
+the `nudgling` command line. See [docs/SCENARIOS.md](docs/SCENARIOS.md) for how it behaves in real days.
+
+**By hand (Node 22+):**
 ```bash
 npm install
 npm run setup:models    # llama.cpp + Kev-0.8B + Llama 3.2 3B from official sources, SHA-256 pinned (~3 GB)
