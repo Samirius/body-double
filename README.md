@@ -32,12 +32,31 @@ ask tiny, and makes progress visible, because visible progress is what keeps you
   break during which it stays quiet.
 - **Notices more than drift.** It offers a smaller step when you're stuck on one for 25 minutes. It opens your
   day with a plan and closes it with what you won.
+- **Guards the scope, not only the screen.** Drift also happens *inside* the work:
+  - **Asking for more mid-task.** A bug fix that keeps adding features gets "That's new scope. Finish and
+    commit this first, then park the new idea" (your AI agent asks Nudgling before starting new work).
+  - **A pile of uncommitted changes** in the quest's repo gets "10 files changed, no commit for 60 min.
+    Commit what works now."
+  - **Same site, different job** (an Elementor page edit that turns into WooCommerce orders) gets "Side task?"
+    with **Park it** / **Part of it**.
+- **Rewards the good part, in the moment.**
+  - Every 5 focused minutes builds a **FLOW ×N** combo; an aura grows from cyan to gold.
+  - A focus session with zero drift ends in **gold rain**.
+  - Coming back within a minute of a nudge shows **QUICK RETURN**.
+  - Happiness rises with good habits and never goes sad.
+  - 10 achievements unlock **cosmetics it wears** (shades, cap, headphones, bow, halo, crown), plus a trophy
+    shelf for beaten deadlines and a wins-only week recap.
 - **Progress is the game.** XP only for finished steps (never for time, never from the model). Deadlines are
   bosses with HP bars. Streak shields forgive a missed day. Titles, skills, and four evolution stages.
-- **Works from Claude.** Click **Connect Claude** in the HUD once: it adds the MCP tools and the
-  [skill](skills/nudgling/SKILL.md) that teaches Claude when to use them (it backs up `~/.claude.json` first; a second
-  click undoes it). Then say "I'm starting the Banafah verification, steps are …" or "done with that" in any
-  Claude chat, and Claude drives the companion through MCP tools.
+- **Knows when to be quiet.** No nudges, sounds or effects during Zoom/Teams/Meet calls, presentations or screen
+  sharing; no sounds or effects over fullscreen apps. Quiet hours are in Settings, and after 90 minutes
+  straight it reminds you to take a real break.
+- **Works with any AI agent.** Give the repo link to Claude Code, Codex, OpenClaw, Hermes, pi or Cursor: it
+  follows [AGENTS.md](AGENTS.md), runs `nudgling connect <agent>` (MCP tools + the
+  [skill](skills/nudgling/SKILL.md)), or uses the `nudgling` command line. In the HUD, **Connect Claude** does it
+  in one click.
+
+![Wardrobe: cosmetics earned with achievements](docs/wardrobe.png)
 
 ## Meta AI inside
 | Job | Model | Where it runs |
@@ -74,8 +93,8 @@ in `.env`. Muse Spark then goes first and Llama becomes the backup. The HUD's AI
 
 Check it yourself:
 ```bash
-npm test               # 71 tests, no key and no model needed
-npm run test:pet       # launches the real app, drives it, saves 10 screenshots, checks them
+npm test               # 97 tests, no key and no model needed
+npm run test:pet       # launches the real app, drives it, saves 14 screenshots, checks them
 npm run eval:decider   # the local decision model on 40 labelled window titles
 ```
 
