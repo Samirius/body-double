@@ -70,6 +70,6 @@ Read `skills/nudgling/SKILL.md`. The short version:
 ## Checking it works
 
 ```bash
-npm test          # 97 tests, no key or model needed
-npm run test:pet  # launches the real app, drives it, checks 14 screenshots
+npm test          # 107 tests, no key or model needed
+npm run test:pet  # launches the real app, drives it, checks 16 screenshots
 ```

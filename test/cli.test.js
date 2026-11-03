@@ -9,7 +9,7 @@ import path from 'node:path';
 // through the command line; this runs it against a throwaway service.
 test('cli: start -> done -> scope -> park -> focus, with JSON out', { timeout: 60_000 }, () => {
   const dataDir = mkdtempSync(path.join(tmpdir(), 'bd-cli-'));
-  const env = { ...process.env, BD_DATA_DIR: dataDir, BD_PORT: String(48900 + Math.floor(Math.random() * 90)), BD_PROVIDER: 'none', BD_DECIDER: 'off', BD_WRITER: 'off', BD_SAMPLE_SECONDS: '600', BD_NOTIFY: 'off' };
+  const env = { ...process.env, BD_DATA_DIR: dataDir, BD_PORT: String(48900 + Math.floor(Math.random() * 90)), BD_PROVIDER: 'none', BD_DECIDER: 'off', BD_WRITER: 'off', BD_DESK: 'off', BD_SAMPLE_SECONDS: '600', BD_NOTIFY: 'off' };
   const cli = (...args) => JSON.parse(execFileSync(process.execPath, ['bin/nudgling.mjs', ...args], { env, encoding: 'utf8' }));
   try {
     const added = cli('start', 'Fix the checkout bug', '--steps', 'Reproduce it; Fix line 40', '--repo', '.');

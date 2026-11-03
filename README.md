@@ -51,6 +51,13 @@ ask tiny, and makes progress visible, because visible progress is what keeps you
 - **Knows when to be quiet.** No nudges, sounds or effects during Zoom/Teams/Meet calls, presentations or screen
   sharing; no sounds or effects over fullscreen apps. Quiet hours are in Settings, and after 90 minutes
   straight it reminds you to take a real break.
+- **Physical cards (optional Nudgling Desk).** An ESP32 with a small color screen and an RFID reader puts the
+  creature on your desk ([hardware/nudgling-desk](hardware/nudgling-desk/README.md)), and cards become buttons:
+  - **Starting work is one tap:** a project card makes the quest active, starts the focus ring, and opens
+    Claude with a kickoff prompt.
+  - **Done, Break and Park** have their own cards.
+  - **Card lock:** once you're past your allowance, it pulses every minute until you go back to work or
+    physically tap your Break card.
 - **Works with any AI agent.** Give the repo link to Claude Code, Codex, OpenClaw, Hermes, pi or Cursor: it
   follows [AGENTS.md](AGENTS.md), runs `nudgling connect <agent>` (MCP tools + the
   [skill](skills/nudgling/SKILL.md)), or uses the `nudgling` command line. In the HUD, **Connect Claude** does it
@@ -93,8 +100,8 @@ in `.env`. Muse Spark then goes first and Llama becomes the backup. The HUD's AI
 
 Check it yourself:
 ```bash
-npm test               # 97 tests, no key and no model needed
-npm run test:pet       # launches the real app, drives it, saves 14 screenshots, checks them
+npm test               # 107 tests, no key and no model needed
+npm run test:pet       # launches the real app, drives it, saves 16 screenshots, checks them
 npm run eval:decider   # the local decision model on 40 labelled window titles
 ```
 

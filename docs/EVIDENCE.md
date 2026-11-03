@@ -3,7 +3,7 @@
 Everything here was measured on Samir's PC (Windows 10, AMD Ryzen 5 2400G, 14 GB RAM, CPU only). Raw files are
 in `eval/`. Where something failed, it says so.
 
-## 1. Automated tests: 97 pass
+## 1. Automated tests: 107 pass
 `npm test` covers the core rules, the brain and its model chain, learning from feedback, focus sessions, the
 vault, the local decision model, the background service end to end, and the pet's behaviour. No key or model is
 needed: models are replaced by pi-ai's faux provider or by a stand-in OpenAI-compatible server.
@@ -15,7 +15,7 @@ needed: models are replaced by pi-ai's faux provider or by a stand-in OpenAI-com
 - the flow aura and a side-task bubble;
 - an achievement, and the HUD's rewards and settings cards.
 
-It checks 14 screenshots; the images in `docs/screens/` come from this run. A fresh install made with
+It checks 16 screenshots (including a new RFID card and the card-lock pulse); the images in `docs/screens/` come from this run. A fresh install made with
 `install.ps1` passes the same test.
 
 ## 2. Soak test: 20 minutes, no leaks, no errors

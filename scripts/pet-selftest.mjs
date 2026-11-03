@@ -14,7 +14,7 @@ const record = process.argv.includes('--record');
 const outArg = process.argv.slice(2).find((a) => !a.startsWith('--'));
 const out = path.resolve(outArg || mkdtempSync(path.join(tmpdir(), 'bd-pet-shots-')));
 const dataDir = mkdtempSync(path.join(tmpdir(), 'bd-pet-data-'));
-const env = { ...process.env, BD_DATA_DIR: dataDir, BD_PORT: String(48100 + Math.floor(Math.random() * 400)), BD_NOTIFY: 'off', BD_PROVIDER: 'none', BD_DECIDER: 'off', BD_WRITER: 'off', BD_SAMPLE_SECONDS: '600', BD_DEBUG: '1' };
+const env = { ...process.env, BD_DATA_DIR: dataDir, BD_PORT: String(48100 + Math.floor(Math.random() * 400)), BD_NOTIFY: 'off', BD_PROVIDER: 'none', BD_DECIDER: 'off', BD_WRITER: 'off', BD_DESK: 'off', BD_SAMPLE_SECONDS: '600', BD_DEBUG: '1' };
 const r = spawnSync(electron, ['src/pet/main.js', '--selftest', out, ...(record ? ['--record'] : [])], { env, timeout: record ? 240_000 : 120_000, stdio: 'inherit' });
 const report = JSON.parse(readFileSync(path.join(out, 'report.json'), 'utf8'));
 const shots = ['0-pet-ask', '0-pet-plan', '1-pet-cheer', '2-pet-nudge', '3-pet-sleep', '4-panel', '5-panel-after-add', '6-pet-ring', '7-fx-bomb', '8-fx-rage', '9-pet-flow', '10-pet-side-task', '11-panel-rewards', '12-panel-settings', '13-pet-card-new', '14-fx-pulse'].map((n) => ({ n, bytes: statSync(path.join(out, `${n}.png`)).size }));

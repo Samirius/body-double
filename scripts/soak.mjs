@@ -14,7 +14,7 @@ const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const minutes = Number(process.argv[2]) || 20;
 const sampleSeconds = Number(process.argv[3]) || 2;
 const dataDir = mkdtempSync(path.join(tmpdir(), 'bd-soak-'));
-const env = { ...process.env, BD_DATA_DIR: dataDir, BD_PORT: String(48600 + Math.floor(Math.random() * 300)), BD_NOTIFY: 'off', BD_PROVIDER: 'none', BD_DECIDER: 'off', BD_WRITER: 'off', BD_SAMPLE_SECONDS: String(sampleSeconds), BD_DRIFT_SECONDS: '60' };
+const env = { ...process.env, BD_DATA_DIR: dataDir, BD_PORT: String(48600 + Math.floor(Math.random() * 300)), BD_NOTIFY: 'off', BD_PROVIDER: 'none', BD_DECIDER: 'off', BD_WRITER: 'off', BD_DESK: 'off', BD_SAMPLE_SECONDS: String(sampleSeconds), BD_DRIFT_SECONDS: '60' };
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
 const svc = spawn(process.execPath, ['src/daemon.js'], { cwd: root, env, stdio: ['ignore', 'ignore', 'pipe'] });

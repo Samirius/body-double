@@ -16,6 +16,7 @@ import { buildStats, renderStatsHtml } from './stats.js';
 import { ensureDeciderServer, ensureWriterServer } from './core/decider-server.js';
 import { startMetaLogin, metaSignedIn, metaSignOut } from './agent/meta-auth.js';
 import { createCards } from './cards.js';
+import { createDesk } from './desk.js';
 import { fileURLToPath } from 'node:url';
 
 if (existsSync('.env')) process.loadEnvFile('.env');
@@ -36,14 +37,16 @@ const broadcast = (type, data) => { const line = `data: ${JSON.stringify({ ...da
 // When a pet (or any live client) is connected it shows nudges itself, so
 // Windows pop-ups are only the fallback for when nothing is listening.
 const toast = (title, text) => { if (listeners.size === 0) notify(title, text); };
+let desk = null; // the Nudgling Desk (ESP32) when one is plugged in
 const ui = {
-  async nudge({ message, nextAction, kind = 'drift' }) { toast(message, `Next: ${nextAction}`); broadcast('nudge', { message, nextAction, kind }); },
+  async nudge({ message, nextAction, kind = 'drift' }) { toast(message, `Next: ${nextAction}`); broadcast('nudge', { message, nextAction, kind }); desk?.nudge({ message, nextAction }); },
   gameEvents(events) {
     for (const e of events) {
       if (e.type === 'level-up') toast('Level up!', `You reached level ${e.level}`);
       else if (e.type === 'title') toast('New title', e.name);
       else if (e.type === 'boss-defeated') toast('Boss defeated', e.quest);
       broadcast('game', { game: e });
+      desk?.game(e);
     }
   },
   status(s) { broadcast('status', s); },
@@ -67,6 +70,7 @@ process.on('exit', () => { decider?.child?.kill(); writer?.child?.kill(); });
 
 const { store, companion, modelLabel, dataDir, reloadModels, modelLabelNow } = await createApp({ env, ui });
 const cards = createCards({ store, companion, ui, log: (t, d) => store.log(t, d) });
+desk = createDesk({ companion, cards, log: (t, d) => store.log(t, d) });
 let metaLogin = null; // the sign-in in progress, if any
 let metaError = null; // why the current sign-in attempt failed
 const token = randomBytes(24).toString('hex');
@@ -97,6 +101,7 @@ const routes = {
   // RFID cards (Nudgling Desk, or `nudgling card <id>`): tap, and set what a card does.
   'POST /card': (b) => cards.tap(b.id),
   'GET /cards': () => cards.list(),
+  'GET /desk': () => ({ connected: desk.connected() }),
   'POST /cards/assign': (b) => cards.assign({ id: b.id || undefined, action: b.action, questId: b.questId || null, minutes: b.minutes || null }),
   'POST /cards/remove': (b) => cards.remove(b.id),
   'GET /settings': () => companion.settings(),
@@ -202,6 +207,8 @@ server.listen(PORT, '127.0.0.1', () => {
   writeFileSync(path.join(path.dirname(store.file), 'daemon.json'), JSON.stringify({ port: PORT, pid: process.pid, token, model: modelLabel, startedAt: new Date().toISOString() }));
   store.log('daemon-start', { model: modelLabel });
   companion.start();
+  // Look for a Nudgling Desk on USB every 5 s; keep its screen in sync every 2 s.
+  if (env.BD_DESK !== 'off') { desk.scan(); setInterval(() => desk.scan(), 5000).unref(); setInterval(() => desk.sync(), 2000).unref(); }
   console.log(`companion service on 127.0.0.1:${PORT} (${modelLabel}); data ${store.file}`);
 });
 
