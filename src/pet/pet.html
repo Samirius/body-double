@@ -34,6 +34,7 @@
   .bubble .ask { display: none; gap: 6px; margin-top: 10px; }
   .bubble .ask input { flex: 1; min-width: 0; padding: 8px 9px; font: 600 14px var(--hud); color: var(--ink); background: rgba(0, 240, 255, .06); border: 1px solid var(--cyan); outline: none; caret-color: var(--cyan); }
   .bubble .ask input::placeholder { color: var(--muted); }
+  #card-choices button { flex: 1; padding: 7px 0; }
   .bubble .ask button { flex: none; cursor: pointer; padding: 0 14px; font: 700 12px var(--mono); letter-spacing: .1em; color: var(--void); background: var(--green); border: 0; }
   .bubble button { flex: 1; cursor: pointer; padding: 7px 4px; font: 700 11px var(--mono); letter-spacing: .08em; text-transform: uppercase; color: var(--ink); background: transparent; border: 1px solid #3a3f78;
     clip-path: polygon(6px 0, 100% 0, 100% calc(100% - 6px), calc(100% - 6px) 100%, 0 100%, 0 6px); transition: background .12s, color .12s; }
@@ -69,6 +70,7 @@
     <div class="body">
       <div class="msg"><span id="msg"></span><span class="caret"></span></div>
       <div class="next" id="next"></div>
+      <div class="ask" id="card-choices"><button data-act="focus">Focus</button><button data-act="done">Done</button><button data-act="break">Break</button><button data-act="park">Park</button><button data-act="quest">This quest</button></div>
       <form class="ask" id="ask" autocomplete="off"><input id="ask-in" maxlength="120" placeholder="e.g. Banafah verification"><button type="submit">GO</button></form>
       <div class="actions">
         <button class="primary" id="b-done">Done</button>

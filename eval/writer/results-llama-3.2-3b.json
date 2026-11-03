@@ -1,0 +1,134 @@
+{
+  "model": "llama-3.2-3b",
+  "baseUrl": "http://127.0.0.1:18091/v1",
+  "ranAt": "2026-11-02T03:39:47.716Z",
+  "cases": 8,
+  "byModelPct": 0,
+  "shortPct": 100,
+  "namesQuestPct": 88,
+  "noXpClaimsPct": 100,
+  "medianMs": 6,
+  "maxMs": 580,
+  "rows": [
+    {
+      "event": "drift",
+      "quest": "Banafah verification",
+      "byModel": false,
+      "message": "Quick check: \"Banafah verification\"?",
+      "nextAction": "Upload the storefront photo",
+      "split": null,
+      "short": true,
+      "namesQuest": true,
+      "noXpClaims": true,
+      "ms": 580,
+      "errors": [
+        "Connection error."
+      ]
+    },
+    {
+      "event": "drift",
+      "quest": "Banafah verification",
+      "byModel": false,
+      "message": "Still drifting. \"Banafah verification\" is waiting.",
+      "nextAction": "Upload the storefront photo",
+      "split": null,
+      "short": true,
+      "namesQuest": true,
+      "noXpClaims": true,
+      "ms": 6,
+      "errors": [
+        "Connection error."
+      ]
+    },
+    {
+      "event": "returned",
+      "quest": "White Friday email",
+      "byModel": false,
+      "message": "Welcome back to \"White Friday email\".",
+      "nextAction": "Open last year's email",
+      "split": null,
+      "short": true,
+      "namesQuest": true,
+      "noXpClaims": true,
+      "ms": 6,
+      "errors": [
+        "Connection error."
+      ]
+    },
+    {
+      "event": "stuck",
+      "quest": "Fix the checkout bug",
+      "byModel": false,
+      "message": "30 min on this step. Make it smaller?",
+      "nextAction": "Do only the first line of: Fix the checkout and payment flow",
+      "split": null,
+      "short": true,
+      "namesQuest": true,
+      "noXpClaims": true,
+      "ms": 6,
+      "errors": [
+        "Connection error."
+      ]
+    },
+    {
+      "event": "morning",
+      "quest": "Banafah verification",
+      "byModel": false,
+      "message": "Banafah is due in 5 days; 2 of 6 steps done.",
+      "nextAction": "Add store hours",
+      "split": null,
+      "short": true,
+      "namesQuest": true,
+      "noXpClaims": true,
+      "ms": 6,
+      "errors": [
+        "Connection error."
+      ]
+    },
+    {
+      "event": "evening",
+      "quest": "Banafah verification",
+      "byModel": false,
+      "message": "Done today: 3 steps, 1 comeback.",
+      "nextAction": "Tomorrow, start with: Add store hours",
+      "split": null,
+      "short": true,
+      "namesQuest": false,
+      "noXpClaims": true,
+      "ms": 13,
+      "errors": [
+        "Connection error."
+      ]
+    },
+    {
+      "event": "drift",
+      "quest": null,
+      "byModel": false,
+      "message": "No quest yet, and you have drifted a while.",
+      "nextAction": "Pick one thing for the next 25 minutes and tell me",
+      "split": null,
+      "short": true,
+      "namesQuest": true,
+      "noXpClaims": true,
+      "ms": 6,
+      "errors": [
+        "Connection error."
+      ]
+    },
+    {
+      "event": "chat",
+      "quest": "Hackathon demo video",
+      "byModel": false,
+      "message": "This chat is not about \"Hackathon demo video\". Park the idea and come back?",
+      "nextAction": "Save the idea in one line, then: Record the first 20 seconds",
+      "split": null,
+      "short": true,
+      "namesQuest": true,
+      "noXpClaims": true,
+      "ms": 5,
+      "errors": [
+        "Connection error."
+      ]
+    }
+  ]
+}

@@ -8,6 +8,8 @@
 //   nudgling focus [25|50|stop]        focus session with the timer ring
 //   nudgling pause [minutes] | resume
 //   nudgling week | rewards | wear <item|none>
+//   nudgling card <id>                 tap an RFID card (or test one without the reader)
+//   nudgling cards [assign <focus|done|break|park|quest> [--id X] [--quest Q]] | cards remove <id>
 //   nudgling settings [key=value ...]  e.g. quietFrom=22 quietTo=7 sound=false volume=40
 //   nudgling connect [agent|all] [--remove]   add MCP + skill to claude-code, claude-desktop, codex, cursor, openclaw, hermes, pi
 //   nudgling agents                    which agents are installed / connected
@@ -53,6 +55,17 @@ async function main() {
     case 'focus': return out(await call('POST', '/session', words() === 'stop' ? { action: 'stop' } : { action: 'start', minutes: Number(words()) || 25 }));
     case 'pause': return out(await call('POST', '/pause', { paused: true, minutes: Number(words()) || undefined }));
     case 'resume': return out(await call('POST', '/pause', { paused: false }));
+    case 'card': return out(await call('POST', '/card', { id: words() }));
+    case 'cards': {
+      const [sub, arg] = rest.filter((a) => !a.startsWith('--'));
+      if (sub === 'assign') {
+        let questId;
+        if (flag('quest')) { const q = (await call('GET', '/quests')).find((x) => x.id === flag('quest') || x.title.toLowerCase().includes(flag('quest').toLowerCase())); if (!q) throw new Error('no such quest'); questId = q.id; }
+        return out(await call('POST', '/cards/assign', { action: arg, id: flag('id'), questId, minutes: flag('minutes') }));
+      }
+      if (sub === 'remove') return out(await call('POST', '/cards/remove', { id: arg }));
+      return out(await call('GET', '/cards'));
+    }
     case 'week': return out(await call('GET', '/week'));
     case 'rewards': return out(await call('GET', '/rewards'));
     case 'wear': return out(await call('POST', '/rewards/equip', { item: words() === 'none' ? null : words() }));

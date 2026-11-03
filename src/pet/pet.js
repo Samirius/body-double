@@ -23,7 +23,7 @@ if (QUIET) window.__petX = () => wander.x(); // lets the self-test check a real 
 // --- feelings: emotes, robot sounds, full-screen effects ---------------------
 // SOUND, FX and volume are settings in the service (creature menu, HUD, agents).
 const prefs = { sound: true, fx: true };
-function applySettings(s) { if (!s) return; prefs.sound = s.sound !== false; prefs.fx = s.fx !== false; setVolume(s.volume ?? 60); showPrefs(); }
+function applySettings(s) { if (!s) return; prefs.sound = s.sound !== false; prefs.fx = s.fx !== false; prefs.cardLock = !!s.cardLock; setVolume(s.volume ?? 60); showPrefs(); }
 const feelings = createFeelings();
 function react(r) {
   if (!r) return;
@@ -156,6 +156,8 @@ const KIND = {
   stuck: { title: 'ASSIST // STEP TOO BIG?', accent: '#f5ff3b' },
   morning: { title: 'BOOT // TODAY’S RUN', accent: '#00f0ff' },
   ask: { title: 'NUDGLING // ONLINE', accent: '#39ff9a' },
+  card: { title: 'CARD // ACCEPTED', accent: '#00f0ff' },
+  'card-new': { title: 'CARD // NEW', accent: '#00f0ff' },
   plan: { title: 'QUEST // ACCEPTED', accent: '#39ff9a' },
   'session-start': { title: 'SESSION // ENGAGED', accent: '#00f0ff' },
   'session-end': { title: 'SESSION // COMPLETE', accent: '#39ff9a' },
@@ -193,7 +195,10 @@ function showBubble({ message, nextAction, kind = 'drift' }) {
   $('b-wrong').textContent = kind === 'side-task' ? 'Part of it' : 'Wrong';
   $('b-park').style.display = drift || scope ? '' : 'none';
   // Questions and plan confirmations only need OK / Later.
-  const plain = kind === 'ask' || kind === 'plan';
+  const plain = kind === 'ask' || kind === 'plan' || kind === 'card' || kind === 'card-new';
+  $('card-choices').style.display = kind === 'card-new' ? 'flex' : 'none';
+  // Card lock: snoozing takes your BREAK card, not a click.
+  $('b-snooze').textContent = prefs.cardLock ? 'Card = snooze' : 'Snooze';
   $('b-snooze').style.display = kind === 'evening' || plain || scope ? 'none' : '';
   $('b-done').style.display = plain ? 'none' : '';
   $('b-ok').style.display = drift || kind === 'side-task' ? 'none' : '';
@@ -231,7 +236,15 @@ async function act(name, payload) {
 }
 $('b-done').onclick = async () => { hideBubble(); const r = await act('done'); if (r.ok && !r.data.events.length) floater('NO OPEN STEP', 'warn'); };
 $('b-ok').onclick = () => hideBubble();
-$('b-snooze').onclick = async () => { hideBubble(); await act('snooze', { minutes: 10 }); floater('SNOOZE // 10 MIN', 'good'); };
+$('b-snooze').onclick = async () => {
+  if (prefs.cardLock) { floater('TAP YOUR BREAK CARD TO SNOOZE', 'warn'); return; }
+  hideBubble(); await act('snooze', { minutes: 10 }); floater('SNOOZE // 10 MIN', 'good');
+};
+document.querySelectorAll('#card-choices button').forEach((b) => { b.onclick = async () => {
+  hideBubble();
+  const r = await act('card-assign', { action: b.dataset.act });
+  if (r.ok) { floater(`CARD // ${b.dataset.act.toUpperCase()}${r.data.quest ? ` · ${r.data.quest.toUpperCase()}` : ''}`, 'good'); react({ emote: 'sparkle', voice: 'happy' }); }
+}; });
 $('b-park').onclick = async () => {
   hideBubble();
   const r = await act('park');
@@ -355,6 +368,8 @@ window.bd.onEvent((ev) => {
     }
     case 'session-done': floater(`SESSION COMPLETE // ${g.minutes} MIN`, 'big'); cheer(3000); break;
     case 'perfect-session': react(feelings.perfect(g.minutes)); break;
+    case 'lock-pulse': react({ emote: 'fire', voice: g.minutes >= 10 ? 'angry' : 'hm', fx: { kind: 'pulse', minutes: g.minutes, text: `${String(g.where).toUpperCase()} // ${g.minutes} MIN`, sub: 'Back to your quest, or tap your BREAK card.' } }); break;
+    case 'card': react({ emote: 'sparkle', voice: 'ooh' }); break;
     case 'achievement': floater(`ACHIEVEMENT // ${String(g.name).toUpperCase()}`, 'big'); cheer(3000); react(feelings.achievement(g.name, g.unlocks)); break;
     case 'flow': state.flow = { level: g.level, minutes: g.minutes }; if (g.level === 1 || g.level % 6 === 0) floater(`FLOW ×${g.level} // ${g.minutes} MIN`, 'good'); react(feelings.flow(g.level)); break;
     case 'flow-banked': state.flow = null; floater(`FLOW BANKED // ${g.minutes} MIN`, 'good'); break;

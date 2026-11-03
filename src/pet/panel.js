@@ -160,7 +160,7 @@ const showSettings = (s) => {
   $('s-qfrom').value = s.quietFrom ?? ''; $('s-qto').value = s.quietTo ?? '';
   $('s-morning').value = s.morningHour; $('s-evening').value = s.eveningHour;
   $('s-volume').value = s.volume; $('s-volume-v').textContent = `${s.volume}%`;
-  $('s-sound').checked = s.sound; $('s-fx').checked = s.fx;
+  $('s-sound').checked = s.sound; $('s-fx').checked = s.fx; $('s-lock').checked = s.cardLock;
 };
 window.bd.act('get-settings').then((r) => r.ok && showSettings(r.data));
 const saveSetting = (key, read) => async () => { const r = await window.bd.act('settings', { [key]: read() }); if (r.ok) showSettings(r.data); };
@@ -175,6 +175,7 @@ $('s-volume').oninput = () => { $('s-volume-v').textContent = `${$('s-volume').v
 $('s-volume').onchange = saveSetting('volume', num('s-volume'));
 $('s-sound').onchange = saveSetting('sound', () => $('s-sound').checked);
 $('s-fx').onchange = saveSetting('fx', () => $('s-fx').checked);
+$('s-lock').onchange = saveSetting('cardLock', () => $('s-lock').checked);
 
 // AI card: the model chain, and "Sign in with Meta" (Muse Spark, no key needed).
 const showAi = (s) => {

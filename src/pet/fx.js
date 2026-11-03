@@ -73,6 +73,8 @@ const EFFECTS = {
       ctx.restore();
     };
   },
+  // Card lock: a red pulse with the drift's site and minutes; longer the longer it runs.
+  pulse(fx) { return EFFECTS.rage(fx); },
   rage({ text, sub }) {
     return (t) => {
       const pulse = 0.35 + 0.25 * Math.sin(t * Math.PI * 6);
@@ -93,13 +95,13 @@ const EFFECTS = {
   // A perfect focus session: gold rain.
   gold(fx) { return EFFECTS.confetti(fx, ['#ffe23b', '#ffc400', '#fff3a0', '#ffb000'], '#ffe23b'); },
 };
-const DURATION = { bomb: 3.2, rage: 2.6, confetti: 3, gold: 3 };
+const DURATION = { bomb: 3.2, rage: 2.6, confetti: 3, gold: 3, pulse: 2.2 };
 
 window.bd.onFx((fx) => {
   const make = EFFECTS[fx.kind];
   if (!make) return window.bd.fxDone();
   cancelAnimationFrame(raf);
-  const frame = make(fx), dur = DURATION[fx.kind], start = performance.now();
+  const frame = make(fx), dur = fx.kind === 'pulse' ? Math.min(5, 2.2 + (Number(fx.minutes) || 0) / 5) : DURATION[fx.kind], start = performance.now();
   let last = start;
   const step = (now) => {
     const t = (now - start) / 1000 / dur, dt = Math.min(0.05, (now - last) / 1000);

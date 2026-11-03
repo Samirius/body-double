@@ -36,7 +36,7 @@ export function createCompanion({ store, watcher, makeBrain, ui, judge = null, c
   const T = { ...DEFAULT_TIMING, ...timing, ...(driftOptions.driftAfterSeconds ? { driftAfterSeconds: driftOptions.driftAfterSeconds } : {}) };
   const driftAfter = () => store.get().settings?.driftAfterSeconds ?? T.driftAfterSeconds;
   // User settings (HUD Settings card, creature menu, agents): one place, the store.
-  const SETTINGS = { driftAfterSeconds: 180, quietFrom: null, quietTo: null, morningHour: T.morningHour, eveningHour: T.eveningHour, sound: true, fx: true, volume: 60 };
+  const SETTINGS = { driftAfterSeconds: 180, quietFrom: null, quietTo: null, morningHour: T.morningHour, eveningHour: T.eveningHour, sound: true, fx: true, volume: 60, cardLock: false };
   const setting = (k) => store.get().settings?.[k] ?? SETTINGS[k];
   // Quiet hours (e.g. 22 -> 7): nothing speaks unless you asked for it.
   const inQuietHours = (at) => {
@@ -65,6 +65,9 @@ export function createCompanion({ store, watcher, makeBrain, ui, judge = null, c
   let sideRun = null; // { key, since } current page context of the active quest
   const sideVerdicts = new Map(); // "<questId>|<page key>" -> 'in-scope' | 'side-task'
   const homeScope = new Map(); // questId -> { since, keys } pages of its first 10 on-task minutes
+  // Card lock: once a drift outlasts its allowance, a pulse every minute until
+  // you're back on task or you tap your BREAK card (snoozing needs a physical move).
+  let driftSince = null, lastPulseAt = 0;
   let lastSide = null; // { questId, key } the side task last pointed out (for "it's part of it")
 
   const nextStep = (q) => q?.steps.find((s) => !s.done) || null;
@@ -352,6 +355,19 @@ export function createCompanion({ store, watcher, makeBrain, ui, judge = null, c
     }
   }
 
+  // --- card lock -------------------------------------------------------------
+  async function cardLock(sample, c, at) {
+    if (c.label === 'drift') driftSince ??= at; else if (c.label === 'on-task' || c.label === 'away') driftSince = null;
+    if (!setting('cardLock') || driftSince == null || quiet || onBreak() || inQuietHours(at)) return;
+    const over = at - driftSince - driftAfter() * 1000;
+    if (over < 60_000 || at - lastPulseAt < 60_000) return;
+    lastPulseAt = at;
+    const minutes = Math.round((at - driftSince) / 60_000);
+    const where = (sample && (siteKey(sample) || sample.app)) || 'this';
+    log('lock-pulse', { minutes });
+    ui.gameEvents?.([{ type: 'lock-pulse', minutes, where }]);
+  }
+
   // --- scope guard: drifting inside the work -----------------------------------
   async function guardScope(sample, c, at, quest) {
     if (!quest || quiet || onBreak()) { sideRun = null; return; }
@@ -461,6 +477,7 @@ export function createCompanion({ store, watcher, makeBrain, ui, judge = null, c
       // first nudge after the call isn't swallowed by a cooldown.
       for (const event of drift.push({ label: quiet && c.label === 'drift' ? 'unclear' : c.label, at, reason: c.reason, match: c.match })) await react(event);
       await guardScope(sample, c, at, quest);
+      await cardLock(sample, c, at);
 
       // Stuck: on-task time accumulates.
       if (c.label === 'on-task') onTaskMs += gap;
@@ -524,7 +541,7 @@ export function createCompanion({ store, watcher, makeBrain, ui, judge = null, c
       for (const k of ['quietFrom', 'quietTo']) if (k in patch) clean[k] = int(patch[k], 0, 23);
       if ('morningHour' in patch) clean.morningHour = int(patch.morningHour, 0, 12) ?? SETTINGS.morningHour;
       if ('eveningHour' in patch) clean.eveningHour = int(patch.eveningHour, 12, 23) ?? SETTINGS.eveningHour;
-      for (const k of ['sound', 'fx']) if (k in patch) clean[k] = !!patch[k];
+      for (const k of ['sound', 'fx', 'cardLock']) if (k in patch) clean[k] = !!patch[k];
       if ('volume' in patch) clean.volume = int(patch.volume, 0, 100) ?? SETTINGS.volume;
       store.update((st) => ({ ...st, settings: { ...(st.settings || {}), ...clean } }));
       log('settings', { keys: Object.keys(clean) });
@@ -558,10 +575,11 @@ export function createCompanion({ store, watcher, makeBrain, ui, judge = null, c
       return { forgotten: had ? kw : null, quest: q.title };
     },
     // Optional minutes: a snooze that resumes by itself (survives restarts via pausedUntil).
-    setPaused(paused, { minutes } = {}) {
+    setPaused(paused, { minutes, by } = {}) {
       const pausedUntil = paused && minutes ? now() + minutes * 60_000 : null;
       store.update((st) => ({ ...st, paused, pausedUntil }));
-      log(paused ? 'paused' : 'resumed', minutes ? { minutes } : {});
+      log(paused ? 'paused' : 'resumed', { ...(minutes ? { minutes } : {}), ...(by ? { by } : {}) });
+      if (!paused) driftSince = null;
       ui.status?.({ label: lastLabel, paused, pausedUntil });
       return { paused, pausedUntil };
     },
@@ -581,6 +599,7 @@ export function createCompanion({ store, watcher, makeBrain, ui, judge = null, c
         ...(patch.title != null && str(patch.title, 120) ? { title: str(patch.title, 120) } : {}),
         ...(patch.deadline !== undefined ? { deadline: /^\d{4}-\d{2}-\d{2}$/.test(String(patch.deadline)) ? patch.deadline : null, boss: /^\d{4}-\d{2}-\d{2}$/.test(String(patch.deadline)) } : {}),
         ...(patch.repo !== undefined ? { repo: str(patch.repo, 400) || null } : {}),
+        ...(Array.isArray(patch.links) ? { links: patch.links.map((s) => str(s, 400)).filter((u) => /^https?:\/\//i.test(u)).slice(0, 8) } : {}),
         ...(Array.isArray(patch.allow) ? { allow: patch.allow.map((s) => str(s, 40).toLowerCase()).filter(Boolean).slice(0, 20) } : {}),
         ...(Array.isArray(patch.steps) ? { steps: patch.steps.map((s) => str(s, 120)).filter(Boolean).slice(0, 30).map((text) => ({ id: newId('s'), text, done: false })) } : {}),
       }));

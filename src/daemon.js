@@ -15,6 +15,7 @@ import { importFromFile } from './jarvis.js';
 import { buildStats, renderStatsHtml } from './stats.js';
 import { ensureDeciderServer, ensureWriterServer } from './core/decider-server.js';
 import { startMetaLogin, metaSignedIn, metaSignOut } from './agent/meta-auth.js';
+import { createCards } from './cards.js';
 import { fileURLToPath } from 'node:url';
 
 if (existsSync('.env')) process.loadEnvFile('.env');
@@ -65,6 +66,7 @@ if (!env.BD_LLAMA_URL && env.BD_WRITER !== 'off') {
 process.on('exit', () => { decider?.child?.kill(); writer?.child?.kill(); });
 
 const { store, companion, modelLabel, dataDir, reloadModels, modelLabelNow } = await createApp({ env, ui });
+const cards = createCards({ store, companion, ui, log: (t, d) => store.log(t, d) });
 let metaLogin = null; // the sign-in in progress, if any
 let metaError = null; // why the current sign-in attempt failed
 const token = randomBytes(24).toString('hex');
@@ -92,6 +94,11 @@ const routes = {
   },
   // Scope guard: "is this new request part of the quest?" (agents call it), and
   // "it's part of it" for the side task last pointed out.
+  // RFID cards (Nudgling Desk, or `nudgling card <id>`): tap, and set what a card does.
+  'POST /card': (b) => cards.tap(b.id),
+  'GET /cards': () => cards.list(),
+  'POST /cards/assign': (b) => cards.assign({ id: b.id || undefined, action: b.action, questId: b.questId || null, minutes: b.minutes || null }),
+  'POST /cards/remove': (b) => cards.remove(b.id),
   'GET /settings': () => companion.settings(),
   'GET /rewards': () => companion.rewards(),
   'POST /rewards/equip': (b) => companion.equip(b.item || null),

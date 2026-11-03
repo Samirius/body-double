@@ -134,6 +134,7 @@ async function act(name, payload = {}) {
     case 'rewards': return client.call('GET', '/rewards');
     case 'equip': return client.call('POST', '/rewards/equip', { item: payload.item ?? null });
     case 'week': return client.call('GET', '/week');
+    case 'card-assign': return client.call('POST', '/cards/assign', { action: String(payload.action || '') });
     case 'scope-allow': return client.call('POST', '/scope/allow', {});
     case 'import': return client.call('POST', '/import/jarvis', {});
     case 'add-quest': {
@@ -175,12 +176,12 @@ async function act(name, payload = {}) {
 ipcMain.handle('bd:act', async (_e, name, payload) => {
   try { return { ok: true, data: await act(name, payload) }; } catch (e) { return { ok: false, error: String(e.message || e) }; }
 });
-const FX_KINDS = new Set(['bomb', 'rage', 'confetti', 'gold']);
+const FX_KINDS = new Set(['bomb', 'rage', 'confetti', 'gold', 'pulse']);
 ipcMain.on('bd:fx', (_e, p) => {
   if (!fx || fx.isDestroyed() || !FX_KINDS.has(p?.kind)) return;
   // The strip and this window share the work area's x, so the bomb starts at the creature.
   fx.showInactive();
-  fx.webContents.send('bd:fx', { kind: p.kind, text: String(p.text || '').slice(0, 60), sub: String(p.sub || '').slice(0, 90), x: Number(p.x) || null, sound: !!p.sound });
+  fx.webContents.send('bd:fx', { kind: p.kind, text: String(p.text || '').slice(0, 60), sub: String(p.sub || '').slice(0, 90), x: Number(p.x) || null, sound: !!p.sound, minutes: Number(p.minutes) || 0 });
 });
 ipcMain.on('bd:fx-done', () => { if (fx && !fx.isDestroyed()) fx.hide(); });
 ipcMain.on('bd:interactive', (_e, on) => { if (pet && !pet.isDestroyed()) pet.setIgnoreMouseEvents(!on, { forward: true }); });
@@ -341,6 +342,20 @@ async function selftest() {
     const moved = Math.round(from - 48 - (await petX()));
     step('drag', { moved });
     if (Math.abs(moved - 400) > 60) throw new Error(`dragging moved the creature ${moved}px, expected ~400`);
+    // A new RFID card: the creature asks what it does; pick DONE; the next tap finishes a step.
+    await client.call('POST', '/card', { id: '04A32B91' });
+    await wait(900);
+    await shot(pet, '13-pet-card-new');
+    await pet.webContents.executeJavaScript("document.querySelector('#card-choices button[data-act=\"done\"]').click(); 0");
+    await wait(800);
+    const tapped = await client.call('POST', '/card', { id: '04a3:2b91' });
+    step('card', { action: tapped.action, xp: tapped.events?.[0]?.type || null });
+    if (tapped.action !== 'done') throw new Error('the card was not set to DONE from the bubble');
+    // Card lock pulse (2-5 s, click-through).
+    await client.call('POST', '/debug/emit', { type: 'game', events: [{ type: 'lock-pulse', minutes: 6, where: 'youtube' }] });
+    await wait(900);
+    await shot(fx, '14-fx-pulse');
+    for (let i = 0; i < 40 && fx.isVisible(); i++) await wait(150);
     panel.show(); panel.webContents.send('bd:refresh');
     await wait(1500);
     await shot(panel, '4-panel');
