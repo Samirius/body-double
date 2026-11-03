@@ -26,16 +26,33 @@ test('brain: without a model it uses a template naming the quest and the next st
   assert.equal(shown[0].nextAction, nextStep.text);
 });
 
-test('brain: model splits a big step, then nudges toward the first tiny one', async () => {
+test('brain: model splits a big step once; the nudge points at the first tiny one', async () => {
   const h = fauxHandle([
     fauxAssistantMessage([fauxToolCall('split_step', { steps: ['Open Merchant Center', 'Click Business info', 'Paste the hours'] })], { stopReason: 'toolUse' }),
-    fauxAssistantMessage([fauxToolCall('nudge', { message: 'Banafah first.', nextAction: 'Open Merchant Center' })], { stopReason: 'toolUse' }),
   ]);
   const shown = [], splits = [];
   const brain = createBrain({ modelHandle: h, onNudge: async (n, src) => shown.push({ ...n, src }), onSplit: async (s) => splits.push(s) });
   await brain.handle({ quest, nextStep, event, stats });
-  assert.deepEqual(splits[0], ['Open Merchant Center', 'Click Business info', 'Paste the hours']);
-  assert.deepEqual(shown, [{ message: 'Banafah first.', nextAction: 'Open Merchant Center', src: `model:${h.model.id}` }]);
+  assert.deepEqual(splits, [['Open Merchant Center', 'Click Business info', 'Paste the hours']]);
+  assert.equal(shown.length, 1);
+  assert.equal(shown[0].nextAction, 'Open Merchant Center');
+  assert.equal(shown[0].src, `model:${h.model.id}+template`);
+});
+
+test('brain: real-use regression: steps that send you to a distraction are dropped, at most 5 kept, never split twice', async () => {
+  const h = fauxHandle([
+    fauxAssistantMessage([fauxToolCall('split_step', { steps: ['Open the browser', 'Search for YouTube', 'Find the task', 'Read it', 'Confirm the purchase', 'Write the summary', 'Send it', 'Check messages'] })], { stopReason: 'toolUse' }),
+  ]);
+  const splits = [];
+  const brain = createBrain({ modelHandle: h, onNudge: async () => {}, onSplit: async (s) => splits.push(s) });
+  await brain.handle({ quest: { title: 'finish some work', steps: [] }, nextStep: null, event: { type: 'plan' }, stats });
+  assert.equal(splits.length, 1);
+  assert.deepEqual(splits[0], ['Open the browser', 'Find the task', 'Read it', 'Write the summary', 'Send it']);
+  // A quest that already has 3+ open steps is not split again.
+  const again = [];
+  const h2 = fauxHandle([fauxAssistantMessage([fauxToolCall('split_step', { steps: ['a', 'b'] })], { stopReason: 'toolUse' })]);
+  await createBrain({ modelHandle: h2, onNudge: async () => {}, onSplit: async (s) => again.push(s) }).handle({ quest: { title: 'x', steps: [{ text: '1' }, { text: '2' }, { text: '3' }] }, nextStep: { text: '1' }, event, stats });
+  assert.equal(again.length, 0);
 });
 
 test('brain: a model that answers in plain text still produces a template nudge', async () => {

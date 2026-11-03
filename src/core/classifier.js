@@ -46,6 +46,11 @@ export function classify(sample, quest, rules = DEFAULT_RULES) {
   if (globalDeny) return { label: 'drift', reason: `matches distraction "${globalDeny.trim()}"`, match: { list: 'distractions', keyword: norm(globalDeny) } };
   const comm = firstMatch(hay, rules.communication);
   if (comm) return { label: 'unclear', reason: `messaging (${comm})`, match: null, comm: norm(comm) };
+  // Benefit of the doubt: with a quest active, anything that isn't a known
+  // distraction counts as work. Real use showed a quest without keywords was
+  // never "on task", so only the nagging side could ever fire. Distractions the
+  // lists miss are taught with "you missed it".
+  if (quest) return { label: 'on-task', reason: 'not a distraction: counted as work', match: null, assumed: true };
   return { label: 'unclear', reason: 'no rule matched', match: null };
 }
 

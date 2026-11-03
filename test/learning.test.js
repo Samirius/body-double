@@ -76,6 +76,7 @@ test('learning: explicit keyword wins; nothing learned without a quest or a clue
 test('classifier: X/Twitter only by its title suffix, not any " / x" text', () => {
   const q = { allow: [], deny: [] };
   assert.equal(classify({ app: 'brave', title: 'Home / X - Brave', idleSeconds: 0 }, q).label, 'drift');
-  assert.equal(classify({ app: 'brave', title: 'Projects / Xero - Brave', idleSeconds: 0 }, q).label, 'unclear');
-  assert.equal(classify({ app: 'claude', title: 'Notes / x-axis plan', idleSeconds: 0 }, q).label, 'unclear');
+  // Not X: counted as work (benefit of the doubt with a quest), never a drift.
+  assert.equal(classify({ app: 'brave', title: 'Projects / Xero - Brave', idleSeconds: 0 }, q).label, 'on-task');
+  assert.equal(classify({ app: 'claude', title: 'Notes / x-axis plan', idleSeconds: 0 }, q).label, 'on-task');
 });

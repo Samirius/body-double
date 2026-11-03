@@ -15,7 +15,10 @@ test('classifier: quest keywords, distractions, away, unclear', () => {
   assert.equal(classify(s('brave', 'Merchant Center - Products'), quest).label, 'on-task');
   assert.equal(classify(s('brave', 'Funny cats - YouTube'), quest).label, 'drift');
   assert.equal(classify(s('code', 'index.js - VS Code', 600), quest).label, 'away');
-  assert.equal(classify(s('notepad', 'notes.txt'), quest).label, 'unclear');
+  // With a quest, anything that isn't a distraction gets the benefit of the doubt.
+  assert.equal(classify(s('notepad', 'notes.txt'), quest).label, 'on-task');
+  assert.equal(classify(s('notepad', 'notes.txt'), quest).assumed, true);
+  assert.equal(classify(s('notepad', 'notes.txt'), null).label, 'unclear');
   assert.equal(classify(s('explorer', 'Downloads'), quest).label, 'unclear');
   // quest allow-list beats the global distraction list
   assert.equal(classify(s('brave', 'Course edit - YouTube Studio'), { allow: ['youtube studio'] }).label, 'on-task');

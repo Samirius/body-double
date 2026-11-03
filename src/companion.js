@@ -141,7 +141,7 @@ export function createCompanion({ store, watcher, makeBrain, ui, judge = null, c
       if (!kw) {
         // Most frequent site/app among recent unclear (non-neutral) samples.
         const counts = new Map();
-        for (const r of recent.filter((x) => x.label === 'unclear' && !x.neutral && now() - x.at <= 10 * 60_000)) {
+        for (const r of recent.filter((x) => (x.label === 'unclear' || x.assumed) && !x.neutral && now() - x.at <= 10 * 60_000)) {
           const k = siteKey(r);
           if (k && !(quest.allow || []).some((a) => lower(a) === k)) counts.set(k, (counts.get(k) || 0) + 1);
         }
@@ -315,7 +315,7 @@ export function createCompanion({ store, watcher, makeBrain, ui, judge = null, c
       if (at - commRun.since >= T.commAllowanceMinutes * 60_000) return { label: 'drift', reason: `messaging (${c.comm}) for ${T.commAllowanceMinutes}+ min`, match: { list: 'communication', keyword: c.comm } };
       return c;
     }
-    if (c.label !== 'unclear' || c.neutral || !sample) { unclearRun = null; return c; }
+    if ((c.label !== 'unclear' && !c.assumed) || c.neutral || !sample) { unclearRun = null; return c; }
     const key = siteKey(sample) || lower(sample.app);
     if (!key) return c;
     const v = verdicts.get(key);
@@ -460,7 +460,7 @@ export function createCompanion({ store, watcher, makeBrain, ui, judge = null, c
       settleHappiness(at);
       let c = classify(sample, quest, rules);
       if (sample) {
-        recent.push({ at, app: sample.app, title: sample.title, label: c.label, neutral: !!c.neutral });
+        recent.push({ at, app: sample.app, title: sample.title, label: c.label, neutral: !!c.neutral, assumed: !!c.assumed });
         recent = recent.filter((r) => at - r.at <= RECENT_MS);
       }
       c = await maybeJudge(sample, c, at);

@@ -125,3 +125,16 @@ test('scenario: a bug fix that grew to 10 changed files with no commit gets "com
   assert.ok(warn, 'scope warning');
   assert.match(warn.message, /10 files changed/);
 });
+
+test('real-use regression: a quest with no keywords ("finish some work") still builds flow and counts the comeback', async () => {
+  let w = { app: 'code', title: 'index.js - shop - Visual Studio Code' };
+  const h = setup({ window: () => w, quest: { title: 'finish some work', allow: [], steps: ['Open the file'] } });
+  await h.run(11);
+  assert.ok(h.game.some((e) => e.type === 'flow'), 'work is recognised without keywords');
+  w = { app: 'brave', title: 'Funny cats - YouTube - Brave' };
+  await h.run(3);
+  assert.ok(h.said.some((n) => n.kind === 'drift'));
+  w = { app: 'code', title: 'index.js - shop - Visual Studio Code' };
+  await h.run(1);
+  assert.ok(h.game.some((e) => e.type === 'returned'), 'the comeback is counted');
+});

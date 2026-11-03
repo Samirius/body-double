@@ -12,9 +12,12 @@ import { Agent } from '@earendil-works/pi-agent-core';
 import { createModels, createProvider, Type } from '@earendil-works/pi-ai';
 import { metaSignedIn, createMetaModels } from './meta-auth.js';
 
+// Steps a model must never add: they send you to the very things you drift to.
+const DISTRACTION_STEP = /\b(youtube|netflix|tiktok|instagram|facebook|reddit|twitter|x\.com|twitch|steam|game|games|purchase|buy|shopping)\b/i;
+
 export const SYSTEM_PROMPT = `You are a calm, warm focus companion for someone with ADHD. You speak first.
 Rules for every message:
-- Lead with ONE concrete next action they can do in under 2 minutes ("Open the Merchant Center tab", not "get back to work").
+- Lead with ONE concrete next action they can do in under 2 minutes, built only from their quest and step (name the exact file, page or app from them; never "get back to work").
 - At most 2 short sentences. No guilt, no lectures, no exclamation-mark cheerleading.
 - Name their quest so they remember what matters. If there is no quest, ask them to pick one thing for the next 25 minutes. Never invent XP numbers; the game shows those.
 - If the current step is vague or big (or they are stuck), call split_step with 2-5 tiny steps, then nudge toward the first.
@@ -145,7 +148,8 @@ export function createBrain({ modelHandle = null, modelHandles = modelHandle ? [
     {
       name: 'split_step', label: 'Split step',
       description: 'Replace the current step with 2-5 tiny concrete steps, in order.',
-      parameters: Type.Object({ steps: Type.Array(Type.String({ maxLength: 120 }), { minItems: 2, maxItems: 5 }) }),
+      // Up to 12 accepted (small models overshoot); at most 5 are kept.
+      parameters: Type.Object({ steps: Type.Array(Type.String({ maxLength: 120 }), { minItems: 2, maxItems: 12 }) }),
       execute: async (_id, p) => { await onSplit(p.steps); return { content: [{ type: 'text', text: 'split; now call nudge for the first new step' }], details: p }; },
     },
   ];
@@ -155,9 +159,18 @@ export function createBrain({ modelHandle = null, modelHandles = modelHandle ? [
     async handle({ quest, nextStep, event, stats }) {
       if (!modelHandles.length) return onNudge(templateNudge({ quest, nextStep, event }), 'template');
       for (const handle of modelHandles) {
-        let nudged = false;
+        let nudged = false, split = null;
+        // A split happens at most once, keeps at most 5 steps, and drops steps that
+        // send you to a distraction. In real use, Llama with a required tool call
+        // kept splitting (21 steps, "Search for YouTube"). After the split, the
+        // nudge points at the first new step.
+        const splitOnce = async (_id, p) => {
+          const steps = (p.steps || []).map((s) => String(s).trim()).filter((s) => s && !DISTRACTION_STEP.test(s)).slice(0, 5);
+          if (!split && steps.length >= 2 && (quest?.steps || []).filter((s) => !s.done).length < 3) { split = steps; await onSplit(steps); }
+          return { content: [{ type: 'text', text: 'ok' }], details: p, terminate: true };
+        };
         const agent = new Agent({
-          initialState: { systemPrompt: SYSTEM_PROMPT, model: handle.model, tools: tools.map((t) => (t.name === 'nudge' ? { ...t, execute: async (_id, p) => { nudged = true; await onNudge(p, `model:${handle.model.id}`); return { content: [{ type: 'text', text: 'shown' }], details: p, terminate: true }; } } : t)) },
+          initialState: { systemPrompt: SYSTEM_PROMPT, model: handle.model, tools: tools.map((t) => (t.name === 'nudge' ? { ...t, execute: async (_id, p) => { nudged = true; await onNudge(p, `model:${handle.model.id}`); return { content: [{ type: 'text', text: 'shown' }], details: p, terminate: true }; } } : { ...t, execute: splitOnce })) },
           streamFn: (model, context, options) => handle.models.streamSimple(model, context, { ...options, ...handle.streamOptions }),
           identity: { attribution: null },
         });
@@ -168,6 +181,7 @@ export function createBrain({ modelHandle = null, modelHandles = modelHandle ? [
           log('model-error', { model: handle.model.id, error: String(e.message || e).slice(0, 200) });
         }
         if (nudged) return;
+        if (split) return onNudge(templateNudge({ quest, nextStep: { text: split[0] }, event }), `model:${handle.model.id}+template`);
       }
       await onNudge(templateNudge({ quest, nextStep, event }), 'template-fallback');
     },
