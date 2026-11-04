@@ -7,7 +7,9 @@ import { fileURLToPath } from 'node:url';
 const here = path.dirname(fileURLToPath(import.meta.url));
 const finalDir = path.join(here, 'final');
 const segDir = path.join(finalDir, 'segments');
-const audioDir = path.join(finalDir, 'audio_neural');
+const audioDir = existsSync(path.join(finalDir, 'audio_heygen'))
+  ? path.join(finalDir, 'audio_heygen')
+  : path.join(finalDir, 'audio_neural');
 const soundsDir = path.join(finalDir, 'sounds');
 
 mkdirSync(segDir, { recursive: true });
@@ -188,18 +190,18 @@ function formatSrtTime(sec) {
 }
 
 const narrationItems = [
-  { at: 0.5, dur: 10.20, text: "I have ADHD. Every focus app I've tried waits for me to open it. I never do. So I built one that speaks first." },
-  { at: 13.5, dur: 10.54, text: "Meet the Nudgling. It lives at the bottom of my screen. First it asks what I'm working on, and Meta's Llama splits it into tiny, manageable steps." },
-  { at: 31.0, dur: 10.34, text: "I get to work. But when I drift to YouTube, it doesn't lecture me. It speaks first, offering one quick action I can finish in under two minutes." },
-  { at: 57.5, dur: 10.15, text: "And if I ignore it, it gets a little dramatic. A bomb flies across the screen. When I return to work, it celebrates with bonus XP." },
-  { at: 73.0, dur: 10.27, text: "It also guards my scope. When I ask my AI agent to add a dark mode in the middle of a bug fix, Nudgling catches the scope creep so I can park it for later." },
-  { at: 85.0, dur: 5.90, text: "Clicking the creature starts a focus session. A glowing ring counts down around it." },
-  { at: 96.5, dur: 9.07, text: "As I stay in the zone, flow builds a combo with an expanding aura. A perfect session with zero drift rewards me with gold rain." },
-  { at: 114.0, dur: 8.14, text: "For serious focus, the physical card lock prevents snoozing. Clicking snooze is refused until I tap my card." },
-  { at: 124.0, dur: 7.75, text: "A quick tap unlocks a break. Finishing steps defeats the deadline boss, unlocking new cosmetics." },
-  { at: 143.0, dur: 8.88, text: "Meta's Llama runs right on my PC, so window titles and screen data never leave the machine. Zero cloud keys required." },
-  { at: 161.5, dur: 8.40, text: "We also designed a physical desk companion with an ESP32 and RFID cards for tactile, screen-free focus control." },
-  { at: 177.5, dur: 6.24, text: "It's not just a productivity app. It's an open-source body double that speaks first." }
+  { at: 0.5, dur: 7.50, text: "I have ADHD. Every focus app waits for me to open it. I don't. So I built one that speaks first." },
+  { at: 13.5, dur: 8.36, text: "This is Nudgling, living at the bottom of my screen. It asks what I'm working on, then uses Meta's Llama to break the task into tiny steps." },
+  { at: 31.0, dur: 8.44, text: "I start working. When I drift to YouTube, it doesn't shame me. It speaks first, offering one next action that takes under two minutes." },
+  { at: 57.5, dur: 8.10, text: "Ignore it, and it gets dramatic: a pixel bomb rolls across my screen. Come back to work, and I earn bonus XP." },
+  { at: 73.0, dur: 7.80, text: "It catches scope creep, too. Ask for dark mode mid-bug-fix, and it parks that idea for later." },
+  { at: 85.0, dur: 4.44, text: "I click the creature to start a focus session. The ring counts down around it." },
+  { at: 96.5, dur: 7.68, text: "Every minute in focus builds my combo. The creature glows brighter. Finish a session with zero drift, and gold rains down." },
+  { at: 114.0, dur: 7.03, text: "When I need serious focus, the card lock disables snooze until I physically tap my RFID card." },
+  { at: 124.0, dur: 5.88, text: "Tap my card, and I unlock a break. Each finished step chips away at the deadline boss and unlocks cosmetics." },
+  { at: 143.0, dur: 7.63, text: "Llama runs locally, right on my PC. Window titles and screen data stay private. No cloud keys needed." },
+  { at: 161.5, dur: 7.63, text: "We even designed clip-on hardware: an ESP32 companion with RFID cards for hands-on, screen-free control." },
+  { at: 177.5, dur: 4.81, text: "Nudgling isn't another productivity app. It's an open-source body double that speaks first." }
 ];
 
 let srtContent = '';
