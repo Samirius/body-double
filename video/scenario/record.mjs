@@ -167,13 +167,13 @@ process.on('SIGINT', () => finish(130));
 const openCode = async () => {
   const w = spawn(CODE, ['--user-data-dir', path.join(tmp, 'code'), '--extensions-dir', path.join(tmp, 'code-ext'), '--disable-workspace-trust', '--disable-telemetry', '--new-window', shop, path.join(shop, 'checkout.js')], { stdio: 'ignore', env: { ...process.env, ELECTRON_RUN_AS_NODE: undefined } });
   windows.push(w);
-  await input({ op: 'place', proc: 'Code', title: 'checkout', x: 210, y: 40, w: 1340, h: 800 });
+  await input({ op: 'place', proc: 'Code', title: 'checkout', x: 140, y: 35, w: 1280, h: 630 });
 };
 let chrome = null;
 const openBrowser = async () => {
-  chrome = spawn(CHROME, [`--user-data-dir=${path.join(tmp, 'chrome')}`, '--no-first-run', '--no-default-browser-check', '--mute-audio', '--autoplay-policy=no-user-gesture-required', '--window-position=300,60', '--window-size=1300,780', VIDEO_URL], { stdio: 'ignore' });
+  chrome = spawn(CHROME, [`--user-data-dir=${path.join(tmp, 'chrome')}`, '--no-first-run', '--no-default-browser-check', '--mute-audio', '--autoplay-policy=no-user-gesture-required', '--window-position=160,45', '--window-size=1240,620', VIDEO_URL], { stdio: 'ignore' });
   windows.push(chrome);
-  await input({ op: 'place', proc: 'chrome', title: 'YouTube', x: 300, y: 60, w: 1300, h: 780 });
+  await input({ op: 'place', proc: 'chrome', title: 'YouTube', x: 160, y: 45, w: 1240, h: 620 });
 };
 const closeBrowser = async () => { await input({ op: 'key', keys: '%{F4}' }); await sleep(500); };
 
@@ -237,7 +237,7 @@ try {
   // 5. The comeback: closes YouTube, back in the editor. Real return event.
   beat('comeback');
   await closeBrowser();
-  await input({ op: 'place', proc: 'Code', title: 'checkout', x: 210, y: 40, w: 1340, h: 800 });
+  await input({ op: 'place', proc: 'Code', title: 'checkout', x: 140, y: 35, w: 1280, h: 630 });
   await waitFor(() => petPage.eval(`[...document.querySelectorAll('.floater')].some((f) => /BACK ON QUEST|QUICK RETURN/.test(f.textContent))`), 20_000);
   beat('returned');
   await sleep(3500);
@@ -263,7 +263,7 @@ try {
   await sleep(1500);
   if (await waitFor(() => rectOf('#b-ok'), 4000)) await clickEl('#b-ok');
   else await petPage.eval("document.getElementById('b-ok')?.click(); document.getElementById('bubble').style.display = 'none'; 0");
-  await input({ op: 'place', proc: 'Code', title: 'checkout', x: 210, y: 40, w: 1340, h: 800 });
+  await input({ op: 'place', proc: 'Code', title: 'checkout', x: 140, y: 35, w: 1280, h: 630 });
 
   // 8. Five real minutes of "work": typing keeps it honest for the idle check.
   beat('work-lapse-start', 'real time, sped up in the edit');
@@ -312,7 +312,7 @@ try {
   await api('POST', '/card', { id: 'A1B2C3D4' });
   await sleep(3500);
   await closeBrowser();
-  await input({ op: 'place', proc: 'Code', title: 'checkout', x: 210, y: 40, w: 1340, h: 800 });
+  await input({ op: 'place', proc: 'Code', title: 'checkout', x: 140, y: 35, w: 1280, h: 630 });
   await api('POST', '/pause', { paused: false });
   await api('POST', '/settings', { cardLock: false });
   await sleep(1500);
