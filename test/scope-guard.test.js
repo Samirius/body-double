@@ -9,9 +9,9 @@ import { createBrain } from '../src/agent/brain.js';
 import { createCompanion } from '../src/companion.js';
 
 // A companion on a fake clock, with a scripted window and an optional fake judge.
-function setup({ window, judge = null, quest = {} }) {
+function setup({ window, judge = null, quest = {}, start = '2026-11-03T10:00:00' }) {
   const store = createStore(mkdtempSync(path.join(tmpdir(), 'bd-scope-')));
-  let clock = Date.parse('2026-11-03T10:00:00');
+  let clock = typeof start === 'number' ? start : Date.parse(start);
   const said = [], game = [], statuses = [];
   const c = createCompanion({
     store, judge,
@@ -21,7 +21,7 @@ function setup({ window, judge = null, quest = {} }) {
   });
   c.addQuest(makeQuest({ title: 'Edit the Elementor home page', steps: ['Change the hero text', 'Fix the footer'], allow: ['wordpress', 'my shop'], ...quest }));
   const run = async (minutes) => { for (let i = 0; i < minutes * 4; i++) { await c.tick(); clock += 15_000; } };
-  return { c, store, said, game, statuses, run };
+  return { c, store, said, game, statuses, run, setClock: (t) => { clock = t; } };
 }
 
 test('scenario: in a Zoom call nothing interrupts, even while "drifting"; it speaks again after the call', async () => {
@@ -119,7 +119,7 @@ test('scenario: a bug fix that grew to 10 changed files with no commit gets "com
   writeFileSync(path.join(repo, 'a.js'), 'a\n'); git('add', '.'); git('commit', '-qm', 'init');
   for (let i = 0; i < 10; i++) writeFileSync(path.join(repo, `feature${i}.js`), 'x\n'.repeat(50));
   const h = setup({ window: () => ({ app: 'code', title: 'checkout.js - shop - Visual Studio Code' }), quest: { title: 'Fix the checkout bug', repo, allow: ['checkout'] } });
-  h.store.update((st) => st); // clock is a fixed 2026 date, so the last commit looks old
+  h.setClock(Date.now() + 60 * 60 * 1000); // 1 hour after the git commit, so it looks old
   await h.run(6);
   const warn = h.said.find((n) => n.kind === 'scope');
   assert.ok(warn, 'scope warning');

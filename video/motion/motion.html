@@ -1,0 +1,38 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>Nudgling motion</title>
+<style>
+  :root { --void: #07070d; --cyan: #00f0ff; --magenta: #ff2bd6; --yellow: #f5ff3b; --green: #39ff9a; --ink: #e8ecff; --muted: #8a8fbf;
+    --hud: "Bahnschrift", "Segoe UI", system-ui, sans-serif; --mono: "Cascadia Mono", Consolas, monospace; }
+  html, body { margin: 0; width: 1920px; height: 1080px; overflow: hidden; background: var(--void); color: var(--ink); font-family: var(--hud); }
+  canvas#gl { position: absolute; inset: 0; width: 1920px; height: 1080px; display: block; }
+  canvas#flat { position: absolute; inset: 0; width: 1920px; height: 1080px; image-rendering: pixelated; display: none; }
+  #overlay { position: absolute; inset: 0; pointer-events: none; }
+  .t { position: absolute; left: 0; right: 0; text-align: center; opacity: 0; will-change: transform, opacity; }
+  .big { font-size: 92px; font-weight: 700; letter-spacing: -.01em; text-shadow: 0 4px 30px rgba(0,0,0,.8); }
+  .big em { font-style: normal; color: var(--cyan); text-shadow: 0 0 30px rgba(0,240,255,.6); }
+  .big b { color: var(--magenta); text-shadow: 0 0 30px rgba(255,43,214,.6); font-weight: 700; }
+  .title { font: 800 170px var(--hud); letter-spacing: .02em; color: var(--ink); text-shadow: -4px 0 rgba(255,43,214,.85), 4px 0 rgba(0,240,255,.85), 0 0 50px rgba(0,240,255,.4); }
+  .sub { font: 600 46px var(--hud); color: var(--green); text-shadow: 0 0 20px rgba(57,255,154,.5); }
+  .mono { font: 600 34px var(--mono); color: var(--muted); letter-spacing: .02em; }
+  .url { font: 700 46px var(--mono); color: var(--cyan); text-shadow: 0 0 20px rgba(0,240,255,.5); }
+  .bubble { position: absolute; padding: 18px 30px; background: rgba(9,10,22,.95); border: 2px solid var(--green); font: 700 54px var(--hud); box-shadow: 0 0 40px rgba(57,255,154,.45); clip-path: polygon(0 0, calc(100% - 20px) 0, 100% 20px, 100% 100%, 20px 100%, 0 calc(100% - 20px)); opacity: 0; }
+  .badge { position: absolute; left: 56px; top: 48px; padding: 12px 22px; font: 800 30px var(--mono); letter-spacing: .08em; color: var(--void); background: var(--yellow); box-shadow: 0 0 26px rgba(245,255,59,.5); opacity: 0; }
+  .label { position: absolute; padding: 8px 16px; font: 700 30px var(--hud); color: var(--ink); background: rgba(9,10,22,.9); border-left: 4px solid var(--cyan); white-space: nowrap; opacity: 0; transform: translate(-50%, -50%); }
+  .check { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); width: 1100px; padding: 44px 56px; background: rgba(9,10,22,.93); border: 2px solid #3a3f78; opacity: 0; }
+  .check h2 { margin: 0 0 26px; font: 800 48px var(--hud); }
+  .check div { display: flex; gap: 22px; align-items: baseline; padding: 11px 0; font: 600 38px var(--hud); opacity: 0; }
+  .check i { font: 800 36px var(--mono); font-style: normal; width: 44px; flex: none; }
+  .check .y i { color: var(--green); } .check .n { color: var(--muted); } .check .n i { color: var(--yellow); }
+</style>
+<script type="importmap">{ "imports": { "three": "/video/motion/node_modules/three/build/three.module.js", "three/addons/": "/video/motion/node_modules/three/examples/jsm/" } }</script>
+</head>
+<body>
+  <canvas id="gl" width="1920" height="1080"></canvas>
+  <canvas id="flat" width="480" height="270"></canvas>
+  <div id="overlay"></div>
+  <script type="module" src="motion.js"></script>
+</body>
+</html>
